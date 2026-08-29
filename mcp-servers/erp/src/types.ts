@@ -8,6 +8,8 @@ export interface InventoryRecord {
   sku: string;
   current_stock: number;
   reorder_threshold: number;
+  daily_burn_rate: number;
+  days_of_supply: number;
   primary_supplier_id: number;
   primary_supplier_name: string;
   primary_supplier_region: string;

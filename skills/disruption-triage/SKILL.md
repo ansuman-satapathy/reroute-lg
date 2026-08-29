@@ -30,9 +30,9 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          │
          ▼
 [Step 1: Inventory Buffer Analysis]
-   - Query `read_inventory` for affected SKU(s)
-   - Compute Days of Supply (DoS): `current_stock / daily_burn_rate`
-   - Calculate projected stockout date
+   - Query `read_inventory` for affected SKU(s) (returns `current_stock`, `reorder_threshold`, `daily_burn_rate`, and `days_of_supply`)
+   - Confirm Days of Supply (DoS = `current_stock / daily_burn_rate`). For SKU-4471: 140 / 10 = 14 days.
+   - Calculate projected stockout date (`now() + DoS days`)
          │
          ▼
 [Step 2: Alternate Supplier Discovery]

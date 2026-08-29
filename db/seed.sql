@@ -38,23 +38,23 @@ INSERT INTO suppliers (id, name, region, port_of_origin, reliability_score, lead
 -- ---------------------------------------------------
 -- Core Scenario Item: Marine Bearings (SKU-4471)
 -- Stock is below reorder threshold (140 vs 300), creating urgent operational necessity
-INSERT INTO inventory (id, item_name, sku, current_stock, reorder_threshold, primary_supplier_id) VALUES
-(1, 'Marine Bearings, SKU-4471', 'SKU-4471', 140, 300, 1);
+INSERT INTO inventory (id, item_name, sku, current_stock, reorder_threshold, daily_burn_rate, primary_supplier_id) VALUES
+(1, 'Marine Bearings, SKU-4471', 'SKU-4471', 140, 300, 10, 1);
 
 -- Filler Inventory Items (IDs 2-13, never modified during demo)
-INSERT INTO inventory (id, item_name, sku, current_stock, reorder_threshold, primary_supplier_id) VALUES
-(2, 'High-Pressure Hydraulic Seal Kit', 'SKU-1012', 450, 200, 5),
-(3, 'Common Rail Diesel Injectors (Tier III)', 'SKU-2045', 85, 50, 6),
-(4, 'High-Tensile Studded Anchor Chain 32mm', 'SKU-3190', 60, 40, 7),
-(5, 'Marine Turbocharger Compressor Wheel', 'SKU-5502', 25, 15, 8),
-(6, 'X-Band Solid-State Radar Transceiver', 'SKU-6211', 18, 10, 9),
-(7, 'Ni-Al Bronze Controllable Pitch Blade', 'SKU-7084', 12, 8, 10),
-(8, 'Electro-Hydraulic Cargo Winch Directional Valve', 'SKU-8123', 90, 60, 11),
-(9, 'SWRO Desalination Spiral Membrane Element', 'SKU-9005', 210, 150, 12),
-(10, 'Composite Water-Lubricated Rudder Bushing', 'SKU-4480', 75, 45, 13),
-(11, 'Fail-Safe Emergency Bilge Valve Actuator', 'SKU-3341', 34, 25, 14),
-(12, 'HFO Purifier Centrifuge Disc Stack Set', 'SKU-6612', 55, 30, 15),
-(13, 'Optical Bilge Water Oil Content Detector', 'SKU-7729', 40, 20, 16);
+INSERT INTO inventory (id, item_name, sku, current_stock, reorder_threshold, daily_burn_rate, primary_supplier_id) VALUES
+(2, 'High-Pressure Hydraulic Seal Kit', 'SKU-1012', 450, 200, 15, 5),
+(3, 'Common Rail Diesel Injectors (Tier III)', 'SKU-2045', 85, 50, 5, 6),
+(4, 'High-Tensile Studded Anchor Chain 32mm', 'SKU-3190', 60, 40, 4, 7),
+(5, 'Marine Turbocharger Compressor Wheel', 'SKU-5502', 25, 15, 2, 8),
+(6, 'X-Band Solid-State Radar Transceiver', 'SKU-6211', 18, 10, 1, 9),
+(7, 'Ni-Al Bronze Controllable Pitch Blade', 'SKU-7084', 12, 8, 1, 10),
+(8, 'Electro-Hydraulic Cargo Winch Directional Valve', 'SKU-8123', 90, 60, 6, 11),
+(9, 'SWRO Desalination Spiral Membrane Element', 'SKU-9005', 210, 150, 10, 12),
+(10, 'Composite Water-Lubricated Rudder Bushing', 'SKU-4480', 75, 45, 5, 13),
+(11, 'Fail-Safe Emergency Bilge Valve Actuator', 'SKU-3341', 34, 25, 3, 14),
+(12, 'HFO Purifier Centrifuge Disc Stack Set', 'SKU-6612', 55, 30, 4, 15),
+(13, 'Optical Bilge Water Oil Content Detector', 'SKU-7729', 40, 20, 2, 16);
 
 -- ---------------------------------------------------
 -- 3. Supplier Catalog (Alternate supplier quotes for SKU-4471)

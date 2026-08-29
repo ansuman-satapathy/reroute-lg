@@ -35,9 +35,22 @@ export async function handleProposePoAmendment(params: {
 }) {
   const db = await getErpWriteDb();
 
-  // 1. Verify item exists in inventory
+  // 1. Verify item exists in inventory and fetch primary supplier & stock metrics
   const inventoryItem = db
-    .prepare('SELECT id, item_name, sku FROM inventory WHERE sku = ?')
+    .prepare(
+      `SELECT 
+        i.id, 
+        i.item_name, 
+        i.sku, 
+        i.current_stock, 
+        i.daily_burn_rate,
+        s.unit_cost as primary_unit_cost,
+        s.name as primary_supplier_name,
+        s.region as primary_supplier_region
+      FROM inventory i
+      JOIN suppliers s ON i.primary_supplier_id = s.id
+      WHERE i.sku = ?`
+    )
     .get(params.sku.trim()) as any;
 
   if (!inventoryItem) {
@@ -49,7 +62,8 @@ export async function handleProposePoAmendment(params: {
   // 2. Verify supplier offering exists in catalog for this SKU
   const catalogQuote = db
     .prepare(
-      `SELECT sc.unit_cost, sc.item_name, s.name as supplier_name, s.region as supplier_region
+      `SELECT sc.unit_cost, sc.lead_time_days, sc.reliability_score, sc.item_name, 
+              s.name as supplier_name, s.region as supplier_region
        FROM supplier_catalog sc
        JOIN suppliers s ON sc.supplier_id = s.id
        WHERE sc.supplier_id = ? AND sc.sku = ?`
@@ -59,6 +73,37 @@ export async function handleProposePoAmendment(params: {
   if (!catalogQuote) {
     throw new Error(
       `Supplier ID ${params.supplier_id} does not have a registered offering for SKU "${params.sku}". Only verified catalog offerings may be amended.`
+    );
+  }
+
+  // 3. Enforce Deterministic Operational Guardrails (Fix for Qodo #1)
+  // Guardrail 1: Cost Band (Max +50% variance over primary unit cost)
+  const maxCostCeiling = Number((inventoryItem.primary_unit_cost * 1.5).toFixed(2));
+  if (catalogQuote.unit_cost > maxCostCeiling) {
+    throw new Error(
+      `Guardrail Violation: Alternate supplier unit cost ($${catalogQuote.unit_cost.toFixed(2)}) exceeds maximum acceptable cost band ceiling of +50% ($${maxCostCeiling.toFixed(2)}) over primary supplier (${inventoryItem.primary_supplier_name}: $${inventoryItem.primary_unit_cost.toFixed(2)}).`
+    );
+  }
+
+  // Guardrail 2: Minimum Reliability Floor (>= 0.75)
+  if (catalogQuote.reliability_score < 0.75) {
+    throw new Error(
+      `Guardrail Violation: Alternate supplier reliability score (${catalogQuote.reliability_score}) is below minimum acceptable floor of 0.75.`
+    );
+  }
+
+  // Guardrail 3: Maximum Lead Time (<= 30 days)
+  if (catalogQuote.lead_time_days > 30) {
+    throw new Error(
+      `Guardrail Violation: Alternate supplier lead time (${catalogQuote.lead_time_days} days) exceeds maximum allowable ceiling of 30 days.`
+    );
+  }
+
+  // Guardrail 4: Arrival Before Projected Stockout Date
+  const daysOfSupply = Math.floor(inventoryItem.current_stock / (inventoryItem.daily_burn_rate || 1));
+  if (catalogQuote.lead_time_days > daysOfSupply) {
+    throw new Error(
+      `Guardrail Violation: Alternate supplier lead time (${catalogQuote.lead_time_days} days) exceeds available Days of Supply (${daysOfSupply} days at ${inventoryItem.daily_burn_rate} units/day). Stockout would occur before delivery!`
     );
   }
 
