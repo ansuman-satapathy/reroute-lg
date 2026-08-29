@@ -7,6 +7,7 @@ import { handleReadInventory, readInventorySchema } from './tools/read-inventory
 import { handleReadPurchaseOrders, readPurchaseOrdersSchema } from './tools/read-purchase-orders.js';
 import { handleReadSuppliers, readSuppliersSchema } from './tools/read-suppliers.js';
 import { handleRecordPoRejection, recordPoRejectionSchema } from './tools/record-po-rejection.js';
+import { handleRunCostOptimization, runCostOptimizationSchema } from './tools/run-cost-optimization.js';
 
 const __filename = fileURLToPath(import.meta.url);
 
@@ -140,7 +141,38 @@ export function createErpMcpServer(): McpServer {
     }
   );
 
-  // 5. propose_po_amendment (WRITE TOOL - Pauses behind TrueForge hard-approval gate)
+  // 5. run_cost_optimization (Read-only, autonomous fallback / execution tool)
+  server.tool(
+    'run_cost_optimization',
+    'Execute multi-criteria cost, lead time, and reliability optimization analysis across candidate suppliers. Weighs unit cost (40%), lead time (30%), and reliability (30%) to produce ranked recommendations.',
+    runCostOptimizationSchema,
+    { readOnlyHint: true },
+    async (args) => {
+      try {
+        const result = await handleRunCostOptimization(args);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Error running cost optimization: ${err.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // 6. propose_po_amendment (WRITE TOOL - Pauses behind TrueForge hard-approval gate)
   server.tool(
     'propose_po_amendment',
     'Propose an amended purchase order to replace a disrupted supplier. Triggers the human approval gate before committing an approved PO to the database.',

@@ -50,9 +50,14 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
    - Lead Time Constraint: ≤ 30 days AND `lead_time_days < Days of Supply`
          │
          ▼
-[Step 4: Optimization & Trade-Off Scoring]
-   - Run Python scoring model in Daytona sandbox (`exec`) if comparing multiple viable alternates
-   - Score candidates based on: Cost Delta (40%), Lead Time Safety Margin (35%), Reliability (25%)
+[Step 4: Multi-Criteria Optimization & Ranked Recommendation]
+   - Generate and execute a Python cost-optimization script in TrueForge's sandbox via `exec` (or call `run_cost_optimization`)
+   - Weigh trade-offs using Multi-Criteria Decision Analysis:
+     * Landed Cost: 40% (0.40) weight
+     * Lead Time: 30% (0.30) weight
+     * Reliability: 30% (0.30) weight
+   - Output a human-readable ranked table (Rank, Supplier Name, Landed Cost, Lead Time, Reliability, Composite Score, Status)
+   - Ensure the balanced compliant supplier outranks cheap-but-slow alternatives that exceed stockout thresholds
          │
          ▼
 [Step 5: Human Approval Gate & PO Amendment]
