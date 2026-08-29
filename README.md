@@ -20,8 +20,9 @@
 5. [Quickstart: Zero to Demo in 5 Minutes](#-quickstart-zero-to-demo-in-5-minutes)
 6. [Demo Scenarios & Test Fixtures](#-demo-scenarios--test-fixtures)
 7. [Production Migration Strategy](#-production-migration-strategy)
-8. [Qodo Code Review Evidence](#-qodo-code-review-evidence)
-9. [Automated Verification Matrix](#-automated-verification-matrix)
+8. [Software Requirements Specification (SRS) & Traceability](#-software-requirements-specification-srs--traceability)
+9. [Qodo Code Review Evidence](#-qodo-code-review-evidence)
+10. [Automated Verification Matrix](#-automated-verification-matrix)
 
 ---
 
@@ -261,6 +262,26 @@ A critical distinction in ReRoute-LG is our hybrid design for hackathon evaluati
 
 ### Why This Design De-Risks Demonstration
 Option A de-risks demo recording: **incoming alert severity is authoritative for triggering triage**, while live telemetry is used for corroboration and enrichment. If live weather in the East China Sea is calm on recording day, the agent notes the divergence but continues its protocol. This prevents live network latency or calm weather from breaking a video recording while keeping external tools genuinely live.
+
+---
+
+## 📜 Software Requirements Specification (SRS) & Traceability
+
+Every pull request, commit, and test in ReRoute-LG explicitly links to a formal Functional Requirement (`FR-1` through `FR-23`) and Non-Functional Requirement (`NFR-1` through `NFR-5`). The authoritative, IEEE-compatible requirements catalog and matrix are maintained in:
+
+👉 **[Complete Software Requirements Specification (docs/SRS.md)](docs/SRS.md)**
+
+### Requirements Traceability Summary
+| Domain | Requirement IDs | Core Capabilities & Gating | Primary PRs |
+|:---|:---:|:---|:---:|
+| **Agent Harness** | `FR-1` – `FR-5` | TrueForge session setup, Nemotron-3 steering, MCP hubs, SOP skill injection | PR #1, #5, #11 |
+| **External Telemetry** | `FR-6` – `FR-8` | Live marine weather (Open-Meteo), news RSS, normalized signal schemas | PR #4 |
+| **ERP Data Access** | `FR-9` – `FR-11a` | Inventory buffer & Days of Supply (DoS), supplier quotes, carrier capacity, strict SQL table write allowlist | PR #2, #3, #6 |
+| **Operational Guardrails**| `FR-12` – `FR-15` | High-severity routing, $\le+50\%$ cost band, $\ge 0.75$ reliability, lead time $<$ DoS | PR #7, #11 |
+| **Subagent Delegation** | `FR-16` – `FR-17` | Parallel carrier evaluations via `create_sub_agent`, trace linkage | PR #8 |
+| **Cost Optimization** | `FR-18` – `FR-19` | Multi-criteria scoring ($40\%$ cost, $30\%$ lead, $30\%$ rel), ranked recommendation table | PR #9 |
+| **Approval Gate & Diff** | `FR-20` – `FR-23` | Generative UI PO Diff, TrueForge `tool.approval_required` gate, Allow commit, Deny audit record | PR #10, #11 |
+| **Non-Functional** | `NFR-1` – `NFR-5` | Zero-secret exposure, sub-90s latency (60.31s), determinism, 24h PO idempotency, audit trail replay | PR #1, #10, #11 |
 
 ---
 
