@@ -27,8 +27,8 @@ export interface ReadOnlyDatabaseConnection {
 }
 
 /**
- * Controlled Write Database Connection Interface
- * Permits mutation only for purchase_orders ledger
+ * Strictly Scoped Write Database Connection Interface
+ * Enforces authorization boundary: write statements MUST only target purchase_orders
  */
 export interface WriteDatabaseConnection {
   prepare(sql: string): {
@@ -141,8 +141,34 @@ let writeDbInstance: WriteDatabaseConnection | null = null;
 let writeDbInitPromise: Promise<WriteDatabaseConnection> | null = null;
 
 /**
- * Thread-safe singleton providing a read-write SQLite database connection.
- * Dedicated to purchase_orders ledger mutations.
+ * Validates that write queries only target the purchase_orders ledger.
+ * Throws security exception if any query attempts to modify suppliers or inventory.
+ */
+function assertPermittedWriteSql(sql: string): void {
+  const normalized = sql.trim().toUpperCase();
+  const isMutation =
+    normalized.startsWith('INSERT') ||
+    normalized.startsWith('UPDATE') ||
+    normalized.startsWith('DELETE');
+
+  if (isMutation) {
+    const isPurchaseOrderTarget =
+      normalized.includes('PURCHASE_ORDERS') &&
+      !normalized.includes('SUPPLIERS') &&
+      !normalized.includes('INVENTORY') &&
+      !normalized.includes('SUPPLIER_CATALOG');
+
+    if (!isPurchaseOrderTarget) {
+      throw new Error(
+        `Security Policy Violation: Mutations are strictly limited to 'purchase_orders'. Forbidden query: ${sql}`
+      );
+    }
+  }
+}
+
+/**
+ * Thread-safe singleton providing a scoped write SQLite database connection.
+ * Dedicated to purchase_orders ledger mutations with strict table allowlisting.
  */
 export async function getErpWriteDb(): Promise<WriteDatabaseConnection> {
   if (writeDbInstance) {
@@ -174,11 +200,15 @@ export async function getErpWriteDb(): Promise<WriteDatabaseConnection> {
       }
 
       writeDbInstance = {
-        prepare: (sql: string) => ({
-          all: (...params: any[]) => rawDb.prepare(sql).all(...params),
-          get: (...params: any[]) => rawDb.prepare(sql).get(...params),
-          run: (...params: any[]) => rawDb.prepare(sql).run(...params),
-        }),
+        prepare: (sql: string) => {
+          assertPermittedWriteSql(sql);
+          const stmt = rawDb.prepare(sql);
+          return {
+            all: (...params: any[]) => stmt.all(...params),
+            get: (...params: any[]) => stmt.get(...params),
+            run: (...params: any[]) => stmt.run(...params),
+          };
+        },
         close: () => {
           rawDb.close();
           writeDbInstance = null;

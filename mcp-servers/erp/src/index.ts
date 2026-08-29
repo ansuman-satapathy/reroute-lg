@@ -139,12 +139,12 @@ export function createErpMcpServer(): McpServer {
     }
   );
 
-  // 5. record_po_rejection (Audit logging tool - Records rejection reason when operator clicks Deny)
+  // 5. record_po_rejection (WRITE TOOL - Records rejection audit record in ledger)
   server.tool(
     'record_po_rejection',
-    'Record an audit entry when a proposed purchase order amendment is rejected by the human operator.',
+    'Record an audit entry in the purchase_orders ledger when a proposed purchase order amendment is rejected by the human operator.',
     recordPoRejectionSchema,
-    { readOnlyHint: true },
+    { readOnlyHint: false, destructiveHint: false },
     async (args) => {
       try {
         const result = await handleRecordPoRejection(args);
