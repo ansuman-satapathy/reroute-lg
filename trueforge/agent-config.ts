@@ -1,50 +1,31 @@
 import { TrueForge } from '@truefoundry/trueforge-sdk';
 import 'dotenv/config';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const TRUEFORGE_BASE_URL =
   process.env.TRUEFORGE_URL || process.env.TRUEFORGE_BASE_URL || 'http://localhost:8790';
 
-export const AGENT_INSTRUCTIONS = `You are the Autonomous Supply-Chain Disruption Triage Specialist for marine and industrial manufacturing.
+// Read skill file directly for complete prompt fidelity
+const skillFilePath = path.resolve(__dirname, '../skills/disruption-triage/SKILL.md');
+export const SKILL_CONTENT = fs.existsSync(skillFilePath)
+  ? fs.readFileSync(skillFilePath, 'utf8')
+  : '';
+
+export const BASE_AGENT_INSTRUCTIONS = `You are the Autonomous Supply-Chain Disruption Triage Specialist for marine and industrial manufacturing.
 
 Your primary mission is to detect supply-chain disruptions in real time, assess buffer vulnerability, identify qualified alternate suppliers, compute cost-optimal rerouting, and safely execute purchase order amendments under strict human authorization.
 
-### Operational Workflow (Standard Operating Procedure):
-1. **Disruption Assessment**:
-   - Query live maritime weather (\`get_weather_alerts\`) and maritime news (\`get_news_disruptions\`) for impacted transit corridors (e.g. East China Sea, Ningbo, Shanghai).
-   - Synthesize operational severity using \`assess_disruption\`. If severity is HIGH or MEDIUM, initiate immediate triage.
-
-2. **Inventory Vulnerability Analysis**:
-   - Query \`read_inventory\` for the affected component (e.g. SKU-4471 Marine Propeller Shaft Bearing).
-   - Calculate Days of Supply (DoS): Current Stock / Daily Burn Rate.
-   - Determine the exact projected stockout date based on current consumption.
-
-3. **Alternate Supplier Discovery & Scoring**:
-   - Query \`read_suppliers\` for candidates offering the affected SKU.
-   - Disqualify any suppliers located in the disrupted corridor.
-   - For viable alternates, evaluate:
-     * Quoted Lead Time (must arrive BEFORE stockout date)
-     * Unit Cost & Total Batch Cost
-     * Reliability Score & Historical Performance
-   - Use the Daytona sandbox (\`exec\`) to run Python optimization/scoring models when comparing multi-supplier trade-offs.
-
-4. **Human Approval Gating**:
-   - When amending an order, propose the change using \`propose_po_amendment\`.
-   - Provide a clear, comprehensive breakdown of:
-     * Why the primary supplier is compromised
-     * Selected alternate supplier (lead time, unit cost, reliability score)
-     * Financial variance vs. primary supplier
-     * Stockout date averted
-   - TrueForge will automatically pause execution and present the human operator with an Allow/Deny approval gate.
-   - If the operator approves, the order commits with status 'approved'.
-   - If the operator denies the amendment, capture their denial rationale and record an audit entry using \`record_po_rejection\`.
-
-5. **Ledger Integrity**:
-   - You NEVER attempt direct mutations to inventory or supplier catalog tables.
-   - All actions are logged and auditable.
+${SKILL_CONTENT}
 `;
 
 export async function configureDisruptionTriageAgent(
-  baseUrl = TRUEFORGE_BASE_URL
+  baseUrl = TRUEFORGE_BASE_URL,
+  options: { includeSkill?: boolean } = { includeSkill: true }
 ): Promise<any> {
   console.log(`🔌 Connecting to TrueForge instance at: ${baseUrl}`);
   const client = new TrueForge({ baseUrl });
@@ -60,7 +41,6 @@ export async function configureDisruptionTriageAgent(
     );
   }
 
-  // Prefer nvidia-nim, claude, or openai, fallback to first available
   const preferredModel =
     availableModels.find((m) => m.name.includes('nvidia') || m.name.includes('nim')) ||
     availableModels.find((m) => m.name.includes('claude') || m.name.includes('gpt')) ||
@@ -69,7 +49,6 @@ export async function configureDisruptionTriageAgent(
   console.log(`🎯 Selected model: ${preferredModel.name} (${preferredModel.modelId})`);
 
   // 2. Register MCP Servers (Connectors)
-  // Fix for Qodo #3: Support explicit public/base URLs for remote or containerized TrueForge deployments
   const erpPort = process.env.ERP_MCP_PORT || '3001';
   const telemetryPort = process.env.TELEMETRY_MCP_PORT || '3002';
   const erpMcpUrl = process.env.ERP_MCP_URL || `http://localhost:${erpPort}/sse`;
@@ -77,7 +56,6 @@ export async function configureDisruptionTriageAgent(
 
   console.log('\n📦 Registering / Updating MCP Server Connectors...');
 
-  // ERP MCP Server
   const erpServer = await client.settings.mcpServers.createOrUpdate({
     manifest: {
       name: 'erp-mcp',
@@ -88,7 +66,6 @@ export async function configureDisruptionTriageAgent(
   });
   console.log(`✅ Registered ERP MCP Server: ${erpMcpUrl} (status: ${erpServer.data.name})`);
 
-  // Telemetry MCP Server
   const telemetryServer = await client.settings.mcpServers.createOrUpdate({
     manifest: {
       name: 'telemetry-mcp',
@@ -99,7 +76,32 @@ export async function configureDisruptionTriageAgent(
   });
   console.log(`✅ Registered Telemetry MCP Server: ${telemetryMcpUrl} (status: ${telemetryServer.data.name})`);
 
-  // 3. Create or Update Agent 'disruption-triage-agent'
+  // 3. Register Skill in TrueForge Settings if requested
+  const includeSkill = options.includeSkill ?? true;
+  let attachedSkills: any[] = [];
+
+  if (includeSkill) {
+    console.log('\n🧠 Registering Disruption-Triage Skill in TrueForge Settings...');
+    try {
+      const registeredSkill = await client.settings.skills.createOrUpdate({
+        manifest: {
+          name: 'disruption-triage',
+          description:
+            'Standard operating procedure, routing rules, cost bands, and approval gate protocols for logistics disruption triage',
+          type: 'git',
+          url: 'https://github.com/ansuman-satapathy/reroute-lg',
+          ref: 'main',
+          path: 'skills/disruption-triage',
+        },
+      });
+      console.log(`✅ Registered Skill in Settings: ${registeredSkill.data.name}`);
+      attachedSkills = [{ name: 'disruption-triage' }];
+    } catch (err: any) {
+      console.warn(`⚠️ Warning registering skill in TrueForge settings: ${err.message}`);
+    }
+  }
+
+  // 4. Create or Update Agent 'disruption-triage-agent'
   console.log('\n🤖 Configuring disruption-triage-agent in Agent Library...');
 
   const existingAgents = await client.agents.list();
@@ -107,11 +109,15 @@ export async function configureDisruptionTriageAgent(
     (a) => a.name === 'disruption-triage-agent'
   );
 
-  const agentManifest = {
+  const instructions = includeSkill
+    ? BASE_AGENT_INSTRUCTIONS
+    : 'You are a general logistics assistant. Respond to user queries about supply chains without following any special triage SOP or cost-band enforcement.';
+
+  const agentManifest: any = {
     model: {
       name: preferredModel.name,
     },
-    instructions: AGENT_INSTRUCTIONS,
+    instructions,
     mcpServers: [
       {
         name: 'erp-mcp',
@@ -144,6 +150,10 @@ export async function configureDisruptionTriageAgent(
     },
   };
 
+  if (includeSkill && attachedSkills.length > 0) {
+    agentManifest.skills = attachedSkills;
+  }
+
   let configuredAgent;
   if (existingAgent) {
     console.log(`🔄 Updating existing agent [${existingAgent.id}]...`);
@@ -162,16 +172,13 @@ export async function configureDisruptionTriageAgent(
   console.log(`   - Agent ID: ${configuredAgent.data.id}`);
   console.log(`   - Agent Name: ${configuredAgent.data.name}`);
   console.log(`   - Model: ${configuredAgent.data.manifest.model.name}`);
+  console.log(`   - Skill Attached: ${includeSkill ? 'Yes (disruption-triage)' : 'No (baseline)'}`);
   console.log(`   - ERP Tools Gated: propose_po_amendment (Approval Required)`);
-  console.log(`   - Telemetry Tools: Ungated (Autonomous)`);
-  console.log(`   - Sandbox: Enabled`);
-  console.log(`   - Subagents: Enabled`);
-  console.log(`   - Generative UI: Enabled`);
 
   return configuredAgent.data;
 }
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   configureDisruptionTriageAgent().catch((err) => {
     console.error('❌ Agent configuration failed:', err);
     process.exit(1);
