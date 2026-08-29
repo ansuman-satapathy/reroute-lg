@@ -121,6 +121,25 @@ async function runErpTests() {
       }
     }
 
+    // Test Guardrail Enforcement (Qodo #1 & #2 on PR #7)
+    console.log('\n🔍 Testing deterministic guardrail enforcement in handleProposePoAmendment...');
+    // Baltic Precision (ID 3) has lead time 28 days > 14 Days of Supply (140 stock / 10 burn rate)
+    try {
+      await handleProposePoAmendment({
+        sku: 'SKU-4471',
+        supplier_id: 3,
+        quantity: 100,
+      });
+      throw new Error('❌ Guardrail failed: Allowed supplier with lead time exceeding stockout date!');
+    } catch (err: any) {
+      if (err.message.includes('exceeds available Days of Supply')) {
+        console.log('✅ Qodo #1 & #2 Fixed: Supplier exceeding stockout date correctly rejected by guardrail:');
+        console.log(`   Message: "${err.message}"`);
+      } else {
+        throw err;
+      }
+    }
+
     // 4. Test Valid propose_po_amendment
     console.log('\n🔍 Testing valid propose_po_amendment execution...');
     const amendedPo = await handleProposePoAmendment({

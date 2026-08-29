@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS inventory (
     sku TEXT NOT NULL UNIQUE,
     current_stock INTEGER NOT NULL CHECK(current_stock >= 0),
     reorder_threshold INTEGER NOT NULL CHECK(reorder_threshold >= 0),
+    daily_burn_rate INTEGER NOT NULL DEFAULT 10 CHECK(daily_burn_rate > 0),
     primary_supplier_id INTEGER NOT NULL,
     FOREIGN KEY (primary_supplier_id) REFERENCES suppliers(id)
 );

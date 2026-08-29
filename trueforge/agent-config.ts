@@ -82,23 +82,20 @@ export async function configureDisruptionTriageAgent(
 
   if (includeSkill) {
     console.log('\n🧠 Registering Disruption-Triage Skill in TrueForge Settings...');
-    try {
-      const registeredSkill = await client.settings.skills.createOrUpdate({
-        manifest: {
-          name: 'disruption-triage',
-          description:
-            'Standard operating procedure, routing rules, cost bands, and approval gate protocols for logistics disruption triage',
-          type: 'git',
-          url: 'https://github.com/ansuman-satapathy/reroute-lg',
-          ref: 'main',
-          path: 'skills/disruption-triage',
-        },
-      });
-      console.log(`✅ Registered Skill in Settings: ${registeredSkill.data.name}`);
-      attachedSkills = [{ name: 'disruption-triage' }];
-    } catch (err: any) {
-      console.warn(`⚠️ Warning registering skill in TrueForge settings: ${err.message}`);
-    }
+    // Fix for Qodo #3: Do not swallow registration errors; fail early if registration fails
+    const registeredSkill = await client.settings.skills.createOrUpdate({
+      manifest: {
+        name: 'disruption-triage',
+        description:
+          'Standard operating procedure, routing rules, cost bands, and approval gate protocols for logistics disruption triage',
+        type: 'git',
+        url: 'https://github.com/ansuman-satapathy/reroute-lg',
+        ref: 'main',
+        path: 'skills/disruption-triage',
+      },
+    });
+    console.log(`✅ Registered Skill in Settings: ${registeredSkill.data.name}`);
+    attachedSkills = [{ name: 'disruption-triage' }];
   }
 
   // 4. Create or Update Agent 'disruption-triage-agent'
