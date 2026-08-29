@@ -84,8 +84,8 @@ export async function verifyDatabase() {
     let constraintEnforced = false;
     try {
       db.prepare(`
-        INSERT INTO purchase_orders (item_name, supplier_id, quantity, unit_cost, total_cost, status)
-        VALUES ('Test Item', 1, 10, 10.0, 100.0, 'invalid_status')
+        INSERT INTO purchase_orders (sku, item_name, supplier_id, quantity, unit_cost, total_cost, status)
+        VALUES ('TEST-SKU', 'Test Item', 1, 10, 10.0, 100.0, 'invalid_status')
       `).run();
     } catch (err: any) {
       if (err.message.includes('CHECK constraint failed') || err.message.includes('check constraint')) {

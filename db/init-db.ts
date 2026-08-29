@@ -61,6 +61,12 @@ export async function initDatabase() {
 
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
+  } else if (fs.existsSync(dbPath)) {
+    try {
+      fs.unlinkSync(dbPath);
+    } catch {
+      // ignore if locked or not deletable
+    }
   }
 
   const schemaSql = fs.readFileSync(schemaPath, 'utf8');

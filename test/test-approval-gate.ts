@@ -9,19 +9,52 @@ async function waitForTurnCompletion(
   turnId: string,
   maxWaitSec = 120
 ): Promise<{ status: string; turn: any; events: any[] }> {
+  let currentTurnId = turnId;
+  const turnIds = [turnId];
+
   for (let i = 0; i < maxWaitSec / 2; i++) {
     await new Promise((r) => setTimeout(r, 2000));
-    const t = await client.sessions.getTurn(sessionId, turnId);
+    const t = await client.sessions.getTurn(sessionId, currentTurnId);
     const status = t.data.state.status;
+
+    if (status === 'error') {
+      const errMsg = String((t.data.state as any)?.message || '');
+      if (errMsg.toLowerCase().includes('overloaded')) {
+        console.log('\n⚠️ Transient overload detected in test harness. Backing off 4s and auto-resuming turn...');
+        await new Promise((r) => setTimeout(r, 4000));
+        const resumeTurn = await client.sessions.createTurn(sessionId, {
+          input: [{ type: 'user.message', content: 'Acknowledge the PO tool execution and finalize your summary.' }],
+        });
+        currentTurnId = resumeTurn.data.id;
+        turnIds.push(currentTurnId);
+        continue;
+      }
+      const allEvents: any[] = [];
+      for (const tid of turnIds) {
+        const evs = await client.sessions.listTurnEvents(sessionId, tid);
+        allEvents.push(...(evs.data || []));
+      }
+      return { status, turn: t.data, events: allEvents };
+    }
+
     if (status !== 'running') {
-      const events = await client.sessions.listTurnEvents(sessionId, turnId);
-      return { status, turn: t.data, events: events.data || [] };
+      const allEvents: any[] = [];
+      for (const tid of turnIds) {
+        const evs = await client.sessions.listTurnEvents(sessionId, tid);
+        allEvents.push(...(evs.data || []));
+      }
+      return { status, turn: t.data, events: allEvents };
     }
     process.stdout.write('.');
   }
-  const finalTurn = await client.sessions.getTurn(sessionId, turnId);
-  const events = await client.sessions.listTurnEvents(sessionId, turnId);
-  return { status: finalTurn.data.state.status, turn: finalTurn.data, events: events.data || [] };
+
+  const finalTurn = await client.sessions.getTurn(sessionId, currentTurnId);
+  const allEvents: any[] = [];
+  for (const tid of turnIds) {
+    const evs = await client.sessions.listTurnEvents(sessionId, tid);
+    allEvents.push(...(evs.data || []));
+  }
+  return { status: finalTurn.data.state.status, turn: finalTurn.data, events: allEvents };
 }
 
 async function waitForApprovalGate(
@@ -260,8 +293,13 @@ Per your disruption-triage SOP:
         (e.content?.includes('"status": "approved"') || e.content?.includes('"status":"approved"'))
     );
 
-    if (approveTurnResult.status !== 'done' && !hasApprovedToolResponse) {
-      throw new Error(`❌ Approval Turn did not finish with 'done'. Status: ${approveTurnResult.status}`);
+    // Fix for Qodo #5: Require status === 'done' strictly and include full turn state in failure message
+    if (approveTurnResult.status !== 'done') {
+      throw new Error(
+        `❌ Approval Turn did not finish with 'done'. Status: ${approveTurnResult.status}, State: ${JSON.stringify(
+          approveTurnResult.turn.state
+        )}`
+      );
     }
     console.log('✅ Approval turn completed successfully');
 
@@ -411,8 +449,13 @@ Per your disruption-triage SOP:
         (e.content?.includes('"status": "rejected"') || e.content?.includes('"status":"rejected"'))
     );
 
-    if (denyTurnResult.status !== 'done' && !hasRejectedToolResponse) {
-      throw new Error(`❌ Deny Turn did not finish with 'done'. Status: ${denyTurnResult.status}`);
+    // Fix for Qodo #5: Require status === 'done' strictly and include full turn state in failure message
+    if (denyTurnResult.status !== 'done') {
+      throw new Error(
+        `❌ Deny Turn did not finish with 'done'. Status: ${denyTurnResult.status}, State: ${JSON.stringify(
+          denyTurnResult.turn.state
+        )}`
+      );
     }
     console.log('✅ Deny turn completed successfully');
 

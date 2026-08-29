@@ -54,6 +54,7 @@ CREATE INDEX IF NOT EXISTS idx_catalog_sku ON supplier_catalog(sku);
 -- Only purchase_orders is ever mutated during the triage & approval lifecycle
 CREATE TABLE IF NOT EXISTS purchase_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sku TEXT NOT NULL,
     item_name TEXT NOT NULL,
     supplier_id INTEGER NOT NULL,
     quantity INTEGER NOT NULL CHECK(quantity > 0),
@@ -65,4 +66,5 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_po_sku ON purchase_orders(sku);
 CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders(status);
