@@ -22,6 +22,7 @@
     "test:agent": "tsx trueforge/test-agent.ts",
     "inject-alert": "tsx scripts/inject-alert.ts",
     "test:inject-alert": "tsx test/test-inject-alert.ts",
+    "test:skill": "tsx test/test-skill-routing.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
