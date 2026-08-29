@@ -19,6 +19,7 @@ import { handleReadInventory } from './src/tools/read-inventory.js';
 import { handleReadPurchaseOrders } from './src/tools/read-purchase-orders.js';
 import { handleReadSuppliers } from './src/tools/read-suppliers.js';
 import { handleRecordPoRejection } from './src/tools/record-po-rejection.js';
+import { handleRunCostOptimization } from './src/tools/run-cost-optimization.js';
 
 async function runErpTests() {
   console.log('🧪 Starting ERP MCP Server Test Suite with Isolated Test DB...');
@@ -45,6 +46,7 @@ async function runErpTests() {
       'read_suppliers',
       'read_purchase_orders',
       'query_carrier_capacity',
+      'run_cost_optimization',
     ];
     for (const expected of expectedReadTools) {
       if (!toolNames.includes(expected)) {
@@ -125,7 +127,37 @@ async function runErpTests() {
       }
     }
 
-    // 3. Test Enforced Write Boundary (Qodo #3)
+    // 3. Test run_cost_optimization Tool (Ticket #09)
+    console.log('\n🔍 Testing run_cost_optimization tool execution and multi-criteria scoring...');
+    const optResult = await handleRunCostOptimization({ sku: 'SKU-4471', units: 500 });
+    if (!optResult.success || !Array.isArray(optResult.ranked_suppliers)) {
+      throw new Error(`❌ Cost optimization failed: ${JSON.stringify(optResult)}`);
+    }
+
+    const ranked = optResult.ranked_suppliers;
+    if (ranked.length < 4) {
+      throw new Error(`❌ Expected at least 4 ranked suppliers, found ${ranked.length}`);
+    }
+
+    // Sanity check: Balanced compliant supplier (Pacific Marine / IndoPacific) must outrank Baltic & Atlantic
+    const topSupplier = ranked[0];
+    console.log(`✅ Top ranked supplier: ${topSupplier.supplier_name} (Composite: ${topSupplier.composite_score})`);
+    if (!topSupplier.eligible) {
+      throw new Error(`❌ Top ranked supplier should be compliant, but got: ${topSupplier.supplier_name}`);
+    }
+
+    const baltic = ranked.find((s: any) => s.supplier_name.includes('Baltic'));
+    const indoPacific = ranked.find((s: any) => s.supplier_name.includes('IndoPacific'));
+    const pacificMarine = ranked.find((s: any) => s.supplier_name.includes('Pacific Marine'));
+
+    if (indoPacific.composite_score <= baltic.composite_score || pacificMarine.composite_score <= baltic.composite_score) {
+      throw new Error(
+        `❌ Sanity Check Failed: Compliant supplier must outrank cheap-but-slow Baltic (Indo: ${indoPacific.composite_score}, Pacific: ${pacificMarine.composite_score}, Baltic: ${baltic.composite_score})`
+      );
+    }
+    console.log(`✅ Sanity Check Passed: IndoPacific (${indoPacific.composite_score}) and Pacific Marine (${pacificMarine.composite_score}) outrank Baltic (${baltic.composite_score})`);
+
+    // 4. Test Enforced Write Boundary (Qodo #3)
     console.log('\n🔍 Testing strict table mutation allowlist in getErpWriteDb()...');
     const writeDb = await getErpWriteDb();
     try {
