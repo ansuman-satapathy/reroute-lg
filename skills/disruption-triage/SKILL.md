@@ -124,8 +124,8 @@ The agent MUST output a visible comparison table directly in the chat response t
 | **Guardrails** | Baseline PO | Compliant (≤+50% cost, ≥0.75 rel, < DoS) | Verified |
 
 ### Human Approval Gate Execution:
-1. **Render the Diff in Chat**: Output the before/after Generative UI Diff comparison table directly in your chat response text to the operator. Do not hide it solely in a sandbox script file or omit numeric columns.
-2. **Trigger Gate**: Invoke `propose_po_amendment` with the structured parameters. TrueForge will pause execution with `tool.approval_required`.
+1. **MANDATORY Generative UI Markdown Table**: In the exact same assistant message where you invoke `propose_po_amendment`, you MUST print the complete Markdown comparison table (`| Metric | Baseline ... |`). Do NOT output conversational placeholder text such as "Now we'll output the table in markdown" or "Let's do it" without the table; you MUST output the actual Markdown table directly in your response text.
+2. **Trigger Gate**: Along with the table, invoke `propose_po_amendment` with the structured parameters. TrueForge will pause execution with `tool.approval_required`.
 3. **Approve Path (Allow)**:
    - When the operator grants approval, the tool executes and commits an `approved` row to `purchase_orders`.
    - Confirm the approved PO ID, timestamp, and supplier re-route to the operator.
