@@ -59,6 +59,20 @@ export async function handleQueryCarrierCapacity(params: {
 
   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
+  // Fix for Qodo #1: Validate and filter by requested route_corridor if specified
+  if (params.route_corridor) {
+    const requested = params.route_corridor.toLowerCase().trim();
+    const actual = data.routing_corridor.toLowerCase();
+    const words = requested.split(/[\s,/]+/).filter(Boolean);
+    const matches = actual.includes(requested) || words.some((w: string) => actual.includes(w));
+
+    if (!matches) {
+      throw new Error(
+        `Carrier "${data.carrier_name}" does not service requested route corridor "${params.route_corridor}". Serviced corridor is: "${data.routing_corridor}".`
+      );
+    }
+  }
+
   return {
     success: true,
     carrier_id: data.carrier_id,
@@ -71,6 +85,7 @@ export async function handleQueryCarrierCapacity(params: {
     cutoff_window_hours: data.cutoff_window_hours,
     next_departure: data.next_departure,
     routing_corridor: data.routing_corridor,
+    corridor_matched: Boolean(params.route_corridor),
     vessel_status: data.vessel_status,
     notes: data.notes,
     queried_at: new Date().toISOString(),

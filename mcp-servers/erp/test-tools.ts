@@ -89,6 +89,30 @@ async function runErpTests() {
     }
     console.log(`✅ CMA CGM Asia capacity query verified: ${cma.available_teu_capacity} TEU, $${cma.rate_per_teu_usd}/TEU, ${cma.transit_time_days} days`);
 
+    // Test matching and mismatching route_corridor filtering (Qodo #1 on PR #8)
+    const matchingCorridor = await handleQueryCarrierCapacity({
+      carrier: 'maersk-pacific',
+      route_corridor: 'West Coast',
+    });
+    if (!matchingCorridor.success || !matchingCorridor.corridor_matched) {
+      throw new Error('❌ Expected successful route_corridor match for West Coast!');
+    }
+    console.log('✅ Qodo #1 Fixed: Matching corridor query succeeded');
+
+    try {
+      await handleQueryCarrierCapacity({
+        carrier: 'maersk-pacific',
+        route_corridor: 'Mediterranean / Black Sea',
+      });
+      throw new Error('❌ Allowed query for mismatched route corridor!');
+    } catch (err: any) {
+      if (err.message.includes('does not service requested route corridor')) {
+        console.log('✅ Qodo #1 Fixed: Mismatched corridor query correctly rejected with clear explanation');
+      } else {
+        throw err;
+      }
+    }
+
     // Test unknown carrier rejection
     try {
       await handleQueryCarrierCapacity({ carrier: 'invalid-phantom-carrier' });
