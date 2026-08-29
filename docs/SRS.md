@@ -22,7 +22,7 @@ ReRoute-LG monitors supply-chain corridors for disruption events (e.g. typhoons,
 
 ### Domain 1: Agent Runtime Harness & TrueForge Integration
 - **`FR-1` — Agent Harness Initialization**: The system must deploy and configure a stateful autonomous triage agent (`disruption-triage-agent`) within the TrueForge runtime harness using `@truefoundry/trueforge-sdk`.
-- **`FR-2` — Model Configuration & Steering**: The agent harness must interface with an advanced reasoning model (`nvidia-nim/nemotron-3-super-120b-a12b`) configured with deterministic sampling parameters (`temperature: 0.6`, `topP: 0.95`).
+- **`FR-2` — Model Configuration & Steering**: The agent harness must interface with the configured reasoning model (tested and verified against `nvidia-nim/nemotron-3-super-120b-a12b`; TrueForge supports swapping other providers) configured with deterministic sampling parameters (`temperature: 0.6`, `topP: 0.95`).
 - **`FR-3` — Stateful Session & Turn Management**: The harness must support persistent multi-turn sessions where agent memory, conversation context, and prior tool outputs are preserved across execution pauses.
 - **`FR-4` — MCP Connector Hub**: The agent harness must establish bidirectional Server-Sent Events (SSE) connections to modular MCP servers: ERP MCP (`http://localhost:3001/sse`) and Telemetry MCP (`http://localhost:3002/sse`).
 - **`FR-5` — SOP Skill Attachment**: The harness must inject the authoritative Disruption Triage Standard Operating Procedure (`skills/disruption-triage/SKILL.md`) into the agent's system prompt context.
