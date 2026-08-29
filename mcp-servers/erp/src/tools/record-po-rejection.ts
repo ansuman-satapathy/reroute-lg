@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { getErpWriteDb } from '../db.js';
 
 export const recordPoRejectionSchema = {
-  item_name: z
+  sku: z
     .string()
     .min(1)
-    .describe('Name of the item for the rejected proposal'),
+    .describe('Canonical SKU of the item that was rejected (e.g. "SKU-4471")'),
   supplier_id: z
     .number()
     .int()
@@ -20,33 +20,50 @@ export const recordPoRejectionSchema = {
     .string()
     .min(1)
     .describe('Reason for rejection provided by the human operator'),
+  item_name: z
+    .string()
+    .optional()
+    .describe('Optional descriptive name of the item'),
 };
 
 export async function handleRecordPoRejection(params: {
-  item_name: string;
+  sku: string;
   supplier_id: number;
   quantity: number;
   reason: string;
+  item_name?: string;
 }) {
   const db = await getErpWriteDb();
 
-  const supplier = db
-    .prepare('SELECT id, name, region, unit_cost FROM suppliers WHERE id = ?')
-    .get(params.supplier_id) as any;
+  // 1. Verify item exists in inventory
+  const inventoryItem = db
+    .prepare('SELECT id, item_name, sku FROM inventory WHERE sku = ?')
+    .get(params.sku.trim()) as any;
 
-  if (!supplier) {
+  if (!inventoryItem) {
     throw new Error(
-      `Supplier ID ${params.supplier_id} does not exist in ERP database.`
+      `Item with SKU "${params.sku}" does not exist in inventory.`
     );
   }
 
+  // 2. Verify supplier offering exists in catalog for this SKU
   const catalogQuote = db
     .prepare(
-      'SELECT unit_cost FROM supplier_catalog WHERE supplier_id = ? AND item_name = ?'
+      `SELECT sc.unit_cost, sc.item_name, s.name as supplier_name, s.region as supplier_region
+       FROM supplier_catalog sc
+       JOIN suppliers s ON sc.supplier_id = s.id
+       WHERE sc.supplier_id = ? AND sc.sku = ?`
     )
-    .get(params.supplier_id, params.item_name) as any;
+    .get(params.supplier_id, params.sku.trim()) as any;
 
-  const unitCost = catalogQuote ? catalogQuote.unit_cost : supplier.unit_cost;
+  if (!catalogQuote) {
+    throw new Error(
+      `Supplier ID ${params.supplier_id} does not have a registered offering for SKU "${params.sku}". Only verified catalog offerings may be recorded.`
+    );
+  }
+
+  const resolvedItemName = params.item_name?.trim() || catalogQuote.item_name || inventoryItem.item_name;
+  const unitCost = catalogQuote.unit_cost;
   const totalCost = Number((unitCost * params.quantity).toFixed(2));
   const auditNotes = `REJECTED BY OPERATOR: ${params.reason.trim()}`;
 
@@ -58,7 +75,7 @@ export async function handleRecordPoRejection(params: {
   const result = db
     .prepare(insertSql)
     .run(
-      params.item_name,
+      resolvedItemName,
       params.supplier_id,
       params.quantity,
       unitCost,
@@ -68,29 +85,20 @@ export async function handleRecordPoRejection(params: {
 
   const poId = Number(result.lastInsertRowid);
 
-  const createdPo = db
-    .prepare(
-      `SELECT po.*, s.name as supplier_name, s.region as supplier_region
-       FROM purchase_orders po
-       JOIN suppliers s ON po.supplier_id = s.id
-       WHERE po.id = ?`
-    )
-    .get(poId) as any;
-
   return {
     success: true,
     po_id: poId,
     status: 'rejected',
-    item_name: createdPo.item_name,
-    supplier_id: createdPo.supplier_id,
-    supplier_name: createdPo.supplier_name,
-    supplier_region: createdPo.supplier_region,
-    quantity: createdPo.quantity,
-    unit_cost: createdPo.unit_cost,
-    total_cost: createdPo.total_cost,
+    sku: params.sku,
+    item_name: resolvedItemName,
+    supplier_id: params.supplier_id,
+    supplier_name: catalogQuote.supplier_name,
+    supplier_region: catalogQuote.supplier_region,
+    quantity: params.quantity,
+    unit_cost: unitCost,
+    total_cost: totalCost,
     rejection_reason: params.reason,
-    created_at: createdPo.created_at,
-    notes: createdPo.notes,
+    notes: auditNotes,
     message: `Purchase Order rejection audit record #${poId} logged with status 'rejected'.`,
   };
 }
