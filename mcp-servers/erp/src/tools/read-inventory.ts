@@ -11,10 +11,22 @@ export const readInventorySchema = {
     .string()
     .optional()
     .describe('Filter inventory by item name substring (e.g. "Bearings")'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(50)
+    .describe('Maximum number of items to return (default: 50)'),
 };
 
-export async function handleReadInventory(params: { sku?: string; item_name?: string }) {
+export async function handleReadInventory(params: {
+  sku?: string;
+  item_name?: string;
+  limit?: number;
+}) {
   const db = await getErpDb();
+  const limit = params.limit ?? 50;
 
   let query = `
     SELECT 
@@ -45,7 +57,8 @@ export async function handleReadInventory(params: { sku?: string; item_name?: st
     queryParams.push(`%${params.item_name.trim()}%`);
   }
 
-  query += ` ORDER BY i.id ASC`;
+  query += ` ORDER BY i.id ASC LIMIT ?`;
+  queryParams.push(limit);
 
   const rows = db.prepare(query).all(...queryParams) as any[];
 
@@ -64,6 +77,7 @@ export async function handleReadInventory(params: { sku?: string; item_name?: st
 
   return {
     total_found: inventory.length,
+    limit_applied: limit,
     inventory,
   };
 }
