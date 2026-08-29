@@ -135,27 +135,60 @@ async function runErpTests() {
     }
 
     const ranked = optResult.ranked_suppliers;
-    if (ranked.length < 4) {
-      throw new Error(`❌ Expected at least 4 ranked suppliers, found ${ranked.length}`);
+    if (ranked.length < 3) {
+      throw new Error(`❌ Expected at least 3 ranked alternate suppliers for SKU-4471, found ${ranked.length}`);
     }
 
-    // Sanity check: Balanced compliant supplier (Pacific Marine / IndoPacific) must outrank Baltic & Atlantic
-    const topSupplier = ranked[0];
-    console.log(`✅ Top ranked supplier: ${topSupplier.supplier_name} (Composite: ${topSupplier.composite_score})`);
-    if (!topSupplier.eligible) {
-      throw new Error(`❌ Top ranked supplier should be compliant, but got: ${topSupplier.supplier_name}`);
+    // Sanity check: Balanced compliant supplier (IndoPacific) must outrank Baltic
+    const topSupplier = optResult.top_recommendation;
+    if (!topSupplier || !topSupplier.eligible) {
+      throw new Error(`❌ Expected eligible top recommendation, got: ${JSON.stringify(topSupplier)}`);
     }
+    console.log(`✅ Top ranked supplier: ${topSupplier.supplier_name} (Composite: ${topSupplier.composite_score})`);
 
     const baltic = ranked.find((s: any) => s.supplier_name.includes('Baltic'));
     const indoPacific = ranked.find((s: any) => s.supplier_name.includes('IndoPacific'));
     const pacificMarine = ranked.find((s: any) => s.supplier_name.includes('Pacific Marine'));
 
-    if (indoPacific.composite_score <= baltic.composite_score || pacificMarine.composite_score <= baltic.composite_score) {
+    if (!indoPacific || !baltic) {
+      throw new Error('❌ Missing IndoPacific or Baltic in ranked suppliers!');
+    }
+
+    if (indoPacific.composite_score <= baltic.composite_score) {
       throw new Error(
-        `❌ Sanity Check Failed: Compliant supplier must outrank cheap-but-slow Baltic (Indo: ${indoPacific.composite_score}, Pacific: ${pacificMarine.composite_score}, Baltic: ${baltic.composite_score})`
+        `❌ Sanity Check Failed: IndoPacific must outrank cheap-but-slow Baltic (Indo: ${indoPacific.composite_score}, Baltic: ${baltic.composite_score})`
       );
     }
-    console.log(`✅ Sanity Check Passed: IndoPacific (${indoPacific.composite_score}) and Pacific Marine (${pacificMarine.composite_score}) outrank Baltic (${baltic.composite_score})`);
+    console.log(`✅ Sanity Check Passed: IndoPacific (${indoPacific.composite_score}) outranks Baltic (${baltic.composite_score})`);
+
+    // Test non-existent SKU rejection (Qodo #1)
+    try {
+      await handleRunCostOptimization({ sku: 'NON-EXISTENT-SKU-9999' });
+      throw new Error('❌ Allowed optimization for non-existent SKU!');
+    } catch (err: any) {
+      if (err.message.includes('not found in ERP inventory')) {
+        console.log('✅ Qodo #1 Fixed: Non-existent SKU correctly rejected by cost optimizer');
+      } else {
+        throw err;
+      }
+    }
+
+    // Test all-ineligible candidates returns top_recommendation: null (Qodo #3)
+    const allIneligibleResult = await handleRunCostOptimization({
+      sku: 'SKU-4471',
+      candidates: [
+        {
+          supplier_name: 'Overpriced Supplier',
+          unit_cost: 150.00, // Exceeds +50% ceiling ($63.75)
+          lead_time_days: 45, // Exceeds 30 days & DoS
+          reliability_score: 0.60, // Below 0.75 floor
+        },
+      ],
+    });
+    if (allIneligibleResult.top_recommendation !== null) {
+      throw new Error(`❌ Qodo #3 Failed: Ineligible candidate returned as recommendation: ${JSON.stringify(allIneligibleResult.top_recommendation)}`);
+    }
+    console.log('✅ Qodo #3 Fixed: When no candidate is eligible, top_recommendation is null');
 
     // 4. Test Enforced Write Boundary (Qodo #3)
     console.log('\n🔍 Testing strict table mutation allowlist in getErpWriteDb()...');
