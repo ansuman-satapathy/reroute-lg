@@ -83,8 +83,8 @@ flowchart TD
         subgraph Approval["Pillar 4: Human-in-the-Loop Gate"]
             RootAgent -->|"Renders Generative UI Diff"| DiffTable["4-Column PO Diff Table<br/>(Baseline vs Alternate)"]
             DiffTable -->|"Gated Call"| Gate{"propose_po_amendment<br/>tool.approval_required"}
-            Gate -->|"Operator: ALLOW"| Commit["Approved PO #104"]
-            Gate -->|"Operator: DENY"| Reject["Rejected PO #105"]
+            Gate -->|"Operator: ALLOW"| Commit["Approved PO<br/>(status='approved')"]
+            Gate -->|"Operator: DENY"| Reject["Rejection Audit Record<br/>(status='rejected')"]
         end
     end
 
