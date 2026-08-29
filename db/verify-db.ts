@@ -1,29 +1,11 @@
-import path from 'node:path';
+import 'dotenv/config';
 import { fileURLToPath } from 'node:url';
+import { getDatabase, resolveDatabasePath } from './init-db.js';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const dbPath = path.resolve(__dirname, '../data/erp.db');
-
-async function getDatabase(targetPath: string) {
-  try {
-    const { default: Database } = await import('better-sqlite3');
-    return new Database(targetPath);
-  } catch {
-    const { DatabaseSync } = await import('node:sqlite');
-    const db = new DatabaseSync(targetPath);
-    return {
-      prepare: (sql: string) => ({
-        all: (...params: any[]) => db.prepare(sql).all(...params),
-        get: (...params: any[]) => db.prepare(sql).get(...params),
-        run: (...params: any[]) => db.prepare(sql).run(...params),
-      }),
-      close: () => db.close(),
-    };
-  }
-}
 
 export async function verifyDatabase() {
+  const dbPath = resolveDatabasePath();
   console.log('🔍 Verifying ERP Database at:', dbPath);
   const db = await getDatabase(dbPath);
 
@@ -49,26 +31,38 @@ export async function verifyDatabase() {
     console.log('✅ Criteria 1 Passed: Primary supplier for SKU-4471 is Oceanic Bearings Ltd in East China Sea.');
     console.log(`   Stock: ${primary.current_stock}/${primary.reorder_threshold} (Stockout alert imminent)`);
 
-    // 2. Verify Alternate Suppliers for SKU-4471
+    // 2. Verify Alternate Suppliers for SKU-4471 (Ensuring distinct expected IDs: 2, 3, 4)
     const alternatesQuery = `
-      SELECT sc.sku, s.name, s.region, sc.unit_cost, sc.lead_time_days, sc.reliability_score
+      SELECT s.id as supplier_id, s.name, s.region, sc.unit_cost, sc.lead_time_days, sc.reliability_score
       FROM supplier_catalog sc
       JOIN suppliers s ON sc.supplier_id = s.id
-      WHERE sc.sku = 'SKU-4471' AND s.name != 'Oceanic Bearings Ltd'
+      WHERE sc.sku = 'SKU-4471' AND s.id != 1
       ORDER BY sc.unit_cost ASC
     `;
     const alternates = db.prepare(alternatesQuery).all() as any[];
+    const alternateIds = new Set(alternates.map((a) => a.supplier_id));
+    const expectedIds = [2, 3, 4];
 
-    if (alternates.length !== 3) {
-      throw new Error(`❌ Verification failed: Expected 3 alternate suppliers, found ${alternates.length}`);
+    if (alternates.length !== 3 || alternateIds.size !== 3) {
+      throw new Error(
+        `❌ Verification failed: Expected 3 distinct alternate suppliers, found ${alternates.length} rows (${alternateIds.size} distinct)`
+      );
     }
 
-    console.log('✅ Criteria 2 Passed: Found 3 alternate suppliers with differentiated trade-offs:');
+    for (const expectedId of expectedIds) {
+      if (!alternateIds.has(expectedId)) {
+        throw new Error(`❌ Verification failed: Expected alternate supplier ID ${expectedId} not found in catalog`);
+      }
+    }
+
+    console.log('✅ Criteria 2 Passed: Found 3 distinct alternate suppliers (IDs 2, 3, 4) with differentiated trade-offs:');
     for (const alt of alternates) {
-      console.log(`   - ${alt.name.padEnd(28)} | $${alt.unit_cost.toFixed(2)}/unit | Lead: ${alt.lead_time_days.toString().padStart(2)}d | Rel: ${alt.reliability_score}`);
+      console.log(
+        `   - [ID ${alt.supplier_id}] ${alt.name.padEnd(28)} | $${alt.unit_cost.toFixed(2)}/unit | Lead: ${alt.lead_time_days.toString().padStart(2)}d | Rel: ${alt.reliability_score}`
+      );
     }
 
-    // Sanity check trade-offs:
+    // Sanity check trade-off profile invariants:
     // Cheapest must be slow (> 20 days)
     const cheapest = alternates[0];
     if (cheapest.unit_cost >= primary.unit_cost || cheapest.lead_time_days < 20) {
@@ -85,27 +79,47 @@ export async function verifyDatabase() {
       throw new Error('❌ Balanced supplier not found');
     }
 
-    // 3. Verify Check Constraint on purchase_orders status
+    // 3. Verify CHECK constraint on purchase_orders status (Fixing self-catching assertion bug)
     console.log('✅ Testing purchase_orders status CHECK constraint...');
+    let constraintEnforced = false;
     try {
       db.prepare(`
         INSERT INTO purchase_orders (item_name, supplier_id, quantity, unit_cost, total_cost, status)
         VALUES ('Test Item', 1, 10, 10.0, 100.0, 'invalid_status')
       `).run();
-      throw new Error('❌ CHECK constraint failed: Allowed invalid status');
     } catch (err: any) {
       if (err.message.includes('CHECK constraint failed') || err.message.includes('check constraint')) {
-        console.log('✅ Criteria 3 Passed: CHECK constraint on purchase_orders status enforced successfully.');
+        constraintEnforced = true;
       } else {
         throw err;
       }
     }
 
-    // 4. Verify Total Inventory and Suppliers Counts (Realism check)
-    const inventoryCount = (db.prepare('SELECT COUNT(*) as count FROM inventory').get() as any).count;
-    const supplierCount = (db.prepare('SELECT COUNT(*) as count FROM suppliers').get() as any).count;
+    if (!constraintEnforced) {
+      // In case an invalid status was erroneously accepted, clean it up before throwing
+      try {
+        db.prepare(`DELETE FROM purchase_orders WHERE status = 'invalid_status'`).run();
+      } catch {}
+      throw new Error('❌ CHECK constraint verification failed: Table allowed invalid status insert!');
+    }
+    console.log('✅ Criteria 3 Passed: CHECK constraint on purchase_orders status enforced successfully.');
 
-    console.log(`✅ Table Counts Verified: ${supplierCount} suppliers, ${inventoryCount} inventory items, 3 baseline POs.`);
+    // 4. Assert Expected Table Counts (Exact counts for suppliers, inventory, baseline POs)
+    const supplierCount = (db.prepare('SELECT COUNT(*) as count FROM suppliers').get() as any).count;
+    const inventoryCount = (db.prepare('SELECT COUNT(*) as count FROM inventory').get() as any).count;
+    const poCount = (db.prepare('SELECT COUNT(*) as count FROM purchase_orders').get() as any).count;
+
+    if (supplierCount !== 16) {
+      throw new Error(`❌ Count assertion failed: Expected 16 suppliers, got ${supplierCount}`);
+    }
+    if (inventoryCount !== 13) {
+      throw new Error(`❌ Count assertion failed: Expected 13 inventory items, got ${inventoryCount}`);
+    }
+    if (poCount !== 3) {
+      throw new Error(`❌ Count assertion failed: Expected 3 baseline purchase orders, got ${poCount}`);
+    }
+
+    console.log(`✅ Table Counts Verified: Exactly ${supplierCount} suppliers, ${inventoryCount} inventory items, and ${poCount} baseline POs.`);
     console.log('🎉 All Ticket #01 verification checks PASSED!');
   } finally {
     db.close();

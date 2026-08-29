@@ -4,6 +4,9 @@
   "private": true,
   "description": "Autonomous Supply-Chain Disruption Triage Agent powered by TrueForge",
   "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "db:init": "tsx db/init-db.ts",
     "db:verify": "tsx db/verify-db.ts",
