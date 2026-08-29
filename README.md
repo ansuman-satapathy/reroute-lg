@@ -5,46 +5,48 @@
 [![TrueForge](https://img.shields.io/badge/Agent_Harness-TrueForge-orange.svg)](https://github.com/truefoundry/trueforge)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Standard%201.6-purple.svg)](https://modelcontextprotocol.io/)
 [![NVIDIA NIM](https://img.shields.io/badge/Model-Nemotron--3--Super--120B-76B900.svg)](https://www.nvidia.com/en-us/ai-data-science/products/nim/)
-[![Database](https://img.shields.io/badge/Database-SQLite%20(Acid)--blue.svg)](https://www.sqlite.org/)
+[![Database](https://img.shields.io/badge/Database-SQLite-blue.svg)](https://www.sqlite.org/)
 [![Code Review](https://img.shields.io/badge/Code_Review-Qodo_Verified-blueviolet.svg)](https://www.qodo.ai/)
 
-**ReRoute-LG** is a production-grade autonomous agent system that detects critical supply-chain disruptions in real time, corroborates external weather and news signals via live Model Context Protocol (MCP) servers, calculates buffer vulnerabilities across enterprise inventory, executes deterministic multi-criteria cost/lead-time optimization, and presents a **Generative UI PO Diff** inside the **TrueForge Agent Harness** before pausing at a human-in-the-loop approval gate.
+> **AI Disclosure**: AI coding assistants (Claude / Gemini) were used during development for boilerplate scaffolding, test harness generation, and documentation drafting. All architectural decisions, system prompts, safety guardrails, code review remediations, and final implementations were directed, reviewed, and verified by the author.
+
+**ReRoute-LG** is an autonomous agent system that detects supply-chain disruptions in real time, corroborates external weather and news signals via live Model Context Protocol (MCP) servers, calculates buffer vulnerabilities across enterprise inventory, executes deterministic multi-criteria cost/lead-time optimization, and presents a **Generative UI PO Diff** inside the **TrueForge Agent Harness** before pausing at a human-in-the-loop approval gate.
 
 ---
 
-## 📑 Table of Contents
-1. [Executive Summary & Problem Statement](#-executive-summary--problem-statement)
-2. [System Architecture & Data Flow](#-system-architecture--data-flow)
-3. [The Seven-Step Disruption Triage Lifecycle](#-the-seven-step-disruption-triage-lifecycle)
-4. [TrueForge Role & Human Approval Gate](#-trueforge-role--human-approval-gate)
-5. [Quickstart: Zero to Demo in 5 Minutes](#-quickstart-zero-to-demo-in-5-minutes)
-6. [Demo Scenarios & Test Fixtures](#-demo-scenarios--test-fixtures)
-7. [Production Migration Strategy](#-production-migration-strategy)
-8. [Software Requirements Specification (SRS) & Traceability](#-software-requirements-specification-srs--traceability)
-9. [Qodo Code Review Evidence](#-qodo-code-review-evidence)
-10. [Automated Verification Matrix](#-automated-verification-matrix)
+## Table of Contents
+1. [Executive Summary & Problem Statement](#executive-summary--problem-statement)
+2. [System Architecture & Data Flow](#system-architecture--data-flow)
+3. [The Seven-Step Disruption Triage Lifecycle](#the-seven-step-disruption-triage-lifecycle)
+4. [TrueForge Role & Human Approval Gate](#trueforge-role--human-approval-gate)
+5. [Quickstart: Running the Demo](#quickstart-running-the-demo)
+6. [Demo Scenarios & Test Fixtures](#demo-scenarios--test-fixtures)
+7. [Production Migration Strategy](#production-migration-strategy)
+8. [Software Requirements Specification (SRS) & Traceability](#software-requirements-specification-srs--traceability)
+9. [Qodo Code Review Evidence](#qodo-code-review-evidence)
+10. [Automated Verification Matrix](#automated-verification-matrix)
 
 ---
 
-## 🎯 Executive Summary & Problem Statement
+## Executive Summary & Problem Statement
 
 ### The Problem
 When severe weather (e.g. Category 4 super typhoons) or geopolitical disruptions shut down key maritime corridors (e.g. East China Sea, Port of Ningbo-Zhoushan), manufacturing supply chains face immediate stockout risks. Traditional enterprise resource planning (ERP) workflows require days of manual email coordination, spreadsheet cross-referencing, and phone calls to find alternate suppliers, verify inventory burn rates, and amend purchase orders. By the time human operators finish triage, assembly lines are already idle.
 
-Conversely, naive autonomous LLM agents present catastrophic financial risks: hallucinated supplier quotes, unchecked budget overruns, and phantom inventory writes without human oversight.
+Conversely, naive autonomous LLM agents present financial risks: ungrounded supplier quotes, unchecked budget overruns, and phantom inventory writes without human oversight.
 
 ### The Solution: ReRoute-LG
 ReRoute-LG strikes the balance: **autonomous investigation paired with deterministic execution guardrails and mandatory human authorization**:
-- **Autonomous Ingestion & Telemetry**: Automatically ingests incoming disruption alerts and verifies ground-truth conditions using live meteorological APIs (Open-Meteo) and live news feeds (Google News RSS).
-- **ERP Integration via MCP**: Connects to the enterprise ledger using standardized Model Context Protocol (MCP) tools for inventory buffers, supplier catalogs, and ocean carrier capacities.
+- **Autonomous Ingestion & Telemetry**: Ingests incoming disruption alerts and verifies ground-truth conditions using live meteorological APIs (Open-Meteo) and live news feeds (Google News RSS).
+- **ERP Integration via MCP**: Connects to the enterprise database using standardized Model Context Protocol (MCP) tools for inventory buffers, supplier catalogs, and ocean carrier capacities.
 - **Strict Guardrail Filtering**: Discards candidates exceeding a **+50% cost ceiling**, falling below **0.75 reliability**, or failing the **Days of Supply (DoS)** constraint (`lead_time_days < DoS`).
-- **Deterministic Multi-Criteria Optimization**: Ranks compliant alternatives using a weighted scoring function ($40\%$ Cost, $30\%$ Lead Time, $30\%$ Reliability).
-- **Generative UI PO Diff**: Renders a rich Markdown diff table directly in chat comparing baseline supplier metrics against the proposed alternate.
-- **Human Approval Gate**: TrueForge enforces a strict pause before executing `propose_po_amendment`. Only human authorization (`allow`) commits the PO to the database; denial (`deny`) triggers an immutable audit log (`record_po_rejection`).
+- **Deterministic Multi-Criteria Optimization**: Ranks compliant alternatives using a weighted scoring function (40% Cost, 30% Lead Time, 30% Reliability).
+- **Generative UI PO Diff**: Renders a Markdown diff table directly in chat comparing baseline supplier metrics against the proposed alternate.
+- **Human Approval Gate**: TrueForge enforces a strict pause before executing `propose_po_amendment`. Only human authorization (`allow`) commits the PO to the database; denial (`deny`) triggers an audit log (`record_po_rejection`).
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## System Architecture & Data Flow
 
 ```mermaid
 flowchart TD
@@ -84,7 +86,7 @@ flowchart TD
 
 ---
 
-## 🔄 The Seven-Step Disruption Triage Lifecycle
+## The Seven-Step Disruption Triage Lifecycle
 
 ```mermaid
 sequenceDiagram
@@ -135,7 +137,7 @@ sequenceDiagram
     rect rgb(255, 240, 245)
     note right of Agent: Step 6 & 7: Human Approval Gate & Commit
     Agent->>TF: propose_po_amendment(supplier_id=4, quantity=200)
-    TF-->>Operator: 🛑 tool.approval_required modal displayed
+    TF-->>Operator: tool.approval_required modal displayed
     alt Human Approves
         Operator->>TF: user.tool_approval status='allow'
         TF->>ERP: Execute propose_po_amendment
@@ -155,17 +157,17 @@ sequenceDiagram
 
 ---
 
-## 🛡️ TrueForge Role & Human Approval Gate
+## TrueForge Role & Human Approval Gate
 
 ### Why TrueForge?
-TrueForge is **not** a generic LLM chat wrapper. It serves as the enterprise runtime harness providing:
-1. **Tool Approval Gating**: Configures explicit permission policies on dangerous operations. In our agent manifest, `propose_po_amendment` is flagged with `approval: required`, while read-only inspection tools (`read_inventory`, `read_suppliers`, `get_weather_alerts`) execute autonomously without interruption.
+TrueForge serves as the agent runtime harness providing:
+1. **Tool Approval Gating**: Enforces permission policies on sensitive operations. In our agent manifest, `propose_po_amendment` is flagged with `approval: required`, while read-only inspection tools (`read_inventory`, `read_suppliers`, `get_weather_alerts`) execute autonomously without interruption.
 2. **Standardized MCP Connector Hub**: Manages bidirectional Server-Sent Events (SSE) connections to both `erp-mcp` (`http://localhost:3001/sse`) and `telemetry-mcp` (`http://localhost:3002/sse`).
-3. **Deterministic Model Steering**: Configures model execution parameters (`temperature: 0.6`, `topP: 0.95`) for NVIDIA Nemotron 3 Super, ensuring zero schema hallucinations and consistent JSON arguments.
-4. **Typed Audit Trails**: Preserves an immutable, chronological event log of every turn (`turn.created`, `tool_calls`, `tool.approval_required`, `user.tool_approval`, `tool.response`), making triage runs fully reconstructable for corporate governance.
+3. **Deterministic Model Steering**: Configures model execution parameters (`temperature: 0.6`, `topP: 0.95`) for NVIDIA Nemotron 3 Super, eliminating schema hallucinations across automated test runs.
+4. **Typed Audit Trails**: Preserves an event log of every turn (`turn.created`, `tool_calls`, `tool.approval_required`, `user.tool_approval`, `tool.response`), making triage runs reconstructable for review.
 
 ### The Generative UI PO Diff
-Before triggering the approval gate, the agent autonomously formats and renders a **Generative UI PO Diff** comparing the disrupted baseline order against the proposed alternate:
+Before triggering the approval gate, the agent formats and renders a **Generative UI PO Diff** comparing the baseline order against the proposed alternate:
 
 | Metric | Baseline (Oceanic Bearings Ltd) | Proposed Alternate (IndoPacific Parts Corp) | Variance / Delta |
 |:---|:---|:---|:---|
@@ -176,11 +178,11 @@ Before triggering the approval gate, the agent autonomously formats and renders 
 | **Reliability Score** | 0.94 | 0.89 | -0.05 (-5.3%) |
 | **Order Quantity** | 200 units | 200 units | 0 units |
 | **Total PO Value** | $8,500.00 | $9,500.00 | +$1,000.00 (+11.8%) |
-| **Guardrails** | Baseline PO | Compliant *(≤+50% cost, ≥0.75 rel, < DoS)* | ✅ Verified |
+| **Guardrails** | Baseline PO | Compliant *(<= +50% cost, >= 0.75 rel, < DoS)* | Verified |
 
 ---
 
-## 🚀 Quickstart: Zero to Demo in 5 Minutes
+## Quickstart: Running the Demo
 
 ### 1. Prerequisites
 - **Node.js**: `v22.13.0` or higher (`node -v`)
@@ -202,7 +204,7 @@ cp .env.example .env
 *(Default `.env` values are pre-configured for local execution against `http://localhost:8790`)*.
 
 ### 3. Initialize ERP Database
-Atomically initialize and seed the SQLite ERP ledger with pristine baseline records (16 suppliers, 13 inventory items, 3 baseline historical POs):
+Initialize and seed the SQLite ERP ledger with baseline records (16 suppliers, 13 inventory items, 3 baseline historical POs):
 ```bash
 npm run db:reset
 npm run db:verify
@@ -236,7 +238,7 @@ npm run inject-alert
 
 ---
 
-## 🧪 Demo Scenarios & Test Fixtures
+## Demo Scenarios & Test Fixtures
 
 | Scenario | Command | Fixture Path | Expected Agent Behavior |
 |:---|:---|:---|:---|
@@ -244,11 +246,11 @@ npm run inject-alert
 | **Port Labor Strike** *(News Routing)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Routes to `get_news_disruptions` (Google News RSS), identifies labor halt, proceeds to alternate PO re-route. |
 | **Routine Dredging Advisory** *(Negative Path)* | `npm run inject-alert:low` | `fixtures/low-severity-alert.json` | Detects LOW severity and 0-hour delay; logs informational note with zero unnecessary re-routing or PO amendments. |
 | **Unrelated Region Alert** *(Filter Path)* | `npm run inject-alert -- --fixture fixtures/unrelated-region-alert.json` | `fixtures/unrelated-region-alert.json` | Analyzes seismic event in South America, detects no supplier exposure, and halts without triage. |
-| **Timing Benchmark** *(Demo Readiness)* | `npm run demo:time` | `fixtures/disruption-alert.json` | Runs end-to-end benchmark measuring exact wall-clock latency to gate (**60.31 seconds**). |
+| **Timing Benchmark** *(Demo Readiness)* | `npm run demo:time` | `fixtures/disruption-alert.json` | Measures wall-clock latency to gate (**typically 30–60s across runs**, e.g. 32.23s, well under the 3-minute video limit). |
 
 ---
 
-## 🏭 Production Migration Strategy
+## Production Migration Strategy
 
 ### Synthetic Ingestion vs. Live External Tools
 A critical distinction in ReRoute-LG is our hybrid design for hackathon evaluation versus production deployment:
@@ -261,13 +263,13 @@ A critical distinction in ReRoute-LG is our hybrid design for hackathon evaluati
 | **Human Authorization** | **TrueForge UI Modal**<br/>Web interface Allow/Deny buttons. | **TrueForge Slack / Teams Integration**<br/>Approval request interactive card dispatched to `#logistics-ops` Slack channel. |
 
 ### Why This Design De-Risks Demonstration
-Option A de-risks demo recording: **incoming alert severity is authoritative for triggering triage**, while live telemetry is used for corroboration and enrichment. If live weather in the East China Sea is calm on recording day, the agent notes the divergence but continues its protocol. This prevents live network latency or calm weather from breaking a video recording while keeping external tools genuinely live.
+This design ensures demo reliability: **incoming alert severity is authoritative for triggering triage**, while live telemetry is used for corroboration and enrichment. If live weather in the East China Sea happens to be calm on recording day, the agent notes the divergence but continues its protocol. This prevents live weather variations or network timeouts from disrupting a clean recording while keeping external tools genuinely live.
 
 ---
 
-## 📜 Software Requirements Specification (SRS) & Traceability
+## Software Requirements Specification (SRS) & Traceability
 
-Every pull request, commit, and test in ReRoute-LG explicitly links to a formal Functional Requirement (`FR-1` through `FR-23`) and Non-Functional Requirement (`NFR-1` through `NFR-5`). The authoritative, IEEE-compatible requirements catalog and matrix are maintained in:
+Every pull request, commit, and test in ReRoute-LG links to a formal Functional Requirement (`FR-1` through `FR-23`) and Non-Functional Requirement (`NFR-1` through `NFR-5`). The complete requirements catalog and matrix are maintained in:
 
 👉 **[Complete Software Requirements Specification (docs/SRS.md)](docs/SRS.md)**
 
@@ -277,46 +279,32 @@ Every pull request, commit, and test in ReRoute-LG explicitly links to a formal 
 | **Agent Harness** | `FR-1` – `FR-5` | TrueForge session setup, Nemotron-3 steering, MCP hubs, SOP skill injection | PR #1, #5, #11 |
 | **External Telemetry** | `FR-6` – `FR-8` | Live marine weather (Open-Meteo), news RSS, normalized signal schemas | PR #4 |
 | **ERP Data Access** | `FR-9` – `FR-11a` | Inventory buffer & Days of Supply (DoS), supplier quotes, carrier capacity, strict SQL table write allowlist | PR #2, #3, #6 |
-| **Operational Guardrails**| `FR-12` – `FR-15` | High-severity routing, $\le+50\%$ cost band, $\ge 0.75$ reliability, lead time $<$ DoS | PR #7, #11 |
+| **Operational Guardrails**| `FR-12` – `FR-15` | High-severity routing, <= +50% cost band, >= 0.75 reliability, lead time < DoS | PR #7, #11 |
 | **Subagent Delegation** | `FR-16` – `FR-17` | Parallel carrier evaluations via `create_sub_agent`, trace linkage | PR #8 |
-| **Cost Optimization** | `FR-18` – `FR-19` | Multi-criteria scoring ($40\%$ cost, $30\%$ lead, $30\%$ rel), ranked recommendation table | PR #9 |
+| **Cost Optimization** | `FR-18` – `FR-19` | Multi-criteria scoring (40% cost, 30% lead, 30% rel), ranked recommendation table | PR #9 |
 | **Approval Gate & Diff** | `FR-20` – `FR-23` | Generative UI PO Diff, TrueForge `tool.approval_required` gate, Allow commit, Deny audit record | PR #10, #11 |
-| **Non-Functional** | `NFR-1` – `NFR-5` | Zero-secret exposure, sub-90s latency (60.31s), determinism, 24h PO idempotency, audit trail replay | PR #1, #10, #11 |
+| **Non-Functional** | `NFR-1` – `NFR-5` | Zero-secret exposure, sub-90s latency (typically 30–60s), determinism, 24h PO idempotency, audit trail replay | PR #1, #10, #11 |
 
 ---
 
-## 🔍 Qodo Code Review Evidence
+## Qodo Code Review Evidence
 
 Across the development lifecycle, every pull request was audited by **Qodo** across two axes: repository coding standards and functional specification adherence.
 
 ### Key Remediations Addressed via Qodo Review
-```
-┌─────────────────────────┬──────────┬────────────────────────────────────────────────────────────────────────┐
-│ Area                    │ Severity │ Resolution Summary                                                     │
-├─────────────────────────┼──────────┼────────────────────────────────────────────────────────────────────────┤
-│ SQL Security Policy     │ High     │ Enforced strict write allowlist in getErpWriteDb() restricting schema  │
-│                         │          │ mutations exclusively to the purchase_orders table.                    │
-├─────────────────────────┼──────────┼────────────────────────────────────────────────────────────────────────┤
-│ Canonical SKU Identity  │ High     │ Added canonical sku column and idx_po_sku index to purchase_orders,   │
-│                         │          │ eliminating fuzzy note matching and ensuring exact 24h idempotency.    │
-├─────────────────────────┼──────────┼────────────────────────────────────────────────────────────────────────┤
-│ Negative Alert Prompt   │ High     │ Dynamically generated alert prompts so low-severity advisories         │
-│                         │          │ exercise SOP negative paths without falsely initiating re-routing.     │
-├─────────────────────────┼──────────┼────────────────────────────────────────────────────────────────────────┤
-│ Overload Continuation   │ High     │ Implemented multi-turn trace aggregation in inject-alert.ts to retain  │
-│                         │          │ all prior tool calls if NVIDIA NIM experiences transient overload.     │
-├─────────────────────────┼──────────┼────────────────────────────────────────────────────────────────────────┤
-│ Gate Test Rigor         │ Medium   │ Enforced status === 'done' strictly on both approval and denial paths, │
-│                         │          │ disallowing masking of post-execution turn errors.                     │
-├─────────────────────────┼──────────┼────────────────────────────────────────────────────────────────────────┤
-│ Tool Extractor Sharing  │ Medium   │ Standardized extractToolName across benchmark and ingestion scripts to │
-│                         │          │ unwrap generic call_tool wrappers and detect camelCase fields.         │
-└─────────────────────────┴──────────┴────────────────────────────────────────────────────────────────────────┘
-```
+
+| Area | Severity | Resolution Summary |
+|:---|:---:|:---|
+| **SQL Security Policy** | High | Enforced strict write allowlist in `getErpWriteDb()` restricting schema mutations exclusively to the `purchase_orders` table. |
+| **Canonical SKU Identity** | High | Added canonical `sku` column and `idx_po_sku` index to `purchase_orders`, eliminating fuzzy note matching and ensuring exact 24h idempotency. |
+| **Negative Alert Prompt** | High | Dynamically generated alert prompts so low-severity advisories exercise SOP negative paths without initiating re-routing. |
+| **Overload Continuation** | High | Implemented multi-turn trace aggregation in `inject-alert.ts` to retain all prior tool calls if NVIDIA NIM experiences transient overload. |
+| **Gate Test Rigor** | Medium | Enforced `status === 'done'` strictly on both approval and denial paths, disallowing masking of post-execution turn errors. |
+| **Tool Extractor Sharing** | Medium | Standardized `extractToolName` across benchmark and ingestion scripts to unwrap generic `call_tool` wrappers and detect camelCase fields. |
 
 ---
 
-## ✅ Automated Verification Matrix
+## Automated Verification Matrix
 
 Run the full suite of automated tests to verify system integrity:
 
@@ -342,7 +330,7 @@ npm run demo:time
 
 ---
 
-## 👥 Contributors & Hackathon Track
+## Submission Details & Track
 - **Project**: ReRoute-LG
 - **Track**: Agentic AI / Best Use of TrueForge & Model Context Protocol (MCP)
-- **Engineered by**: Ansuman Satapathy
+- **Author**: Ansuman Satapathy
