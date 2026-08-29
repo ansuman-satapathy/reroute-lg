@@ -1,0 +1,14 @@
+{
+  "carrier_id": "evergreen-express",
+  "carrier_name": "Evergreen Express Maritime",
+  "service_tier": "Standard Commercial Ocean",
+  "available_teu_capacity": 120,
+  "transit_time_days": 14,
+  "rate_per_teu_usd": 1920.00,
+  "reliability_score": 0.88,
+  "cutoff_window_hours": 48,
+  "next_departure": "2026-09-02T18:00:00Z",
+  "routing_corridor": "Southeast Asia / Singapore Direct Corridor",
+  "vessel_status": "Normal Operations",
+  "notes": "Economical high-capacity carrier with large bulk allotment; moderate transit timeline."
+}

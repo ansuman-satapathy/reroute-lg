@@ -35,9 +35,13 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
    - Calculate projected stockout date (`now() + DoS days`)
          │
          ▼
-[Step 2: Alternate Supplier Discovery]
-   - Query `read_suppliers` for candidate suppliers offering the SKU
-   - Immediately filter out suppliers located in the disrupted corridor
+[Step 2: Alternate Supplier Discovery & Parallel Carrier Queries]
+   - Query `read_suppliers` for candidate suppliers offering the SKU outside the disrupted corridor
+   - When carrier transit times, rates, and space allocations must be evaluated:
+     * Delegate carrier capacity queries to TrueForge's native `create_sub_agent` tool
+     * Spawn parallel subagents — one per carrier (`maersk-pacific`, `evergreen-express`, `cma-cgm-asia`)
+     * Each subagent calls `query_carrier_capacity` independently and returns a concise summary (transit days, rate/TEU, capacity, reliability)
+     * Intermediate subagent tool executions remain isolated in their own subagent threads, returning only condensed findings to the root context
          │
          ▼
 [Step 3: Guardrail & Cost-Band Filtering]
