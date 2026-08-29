@@ -19,6 +19,33 @@ export interface InjectedAlertResult {
   agentResponse: string;
 }
 
+/**
+ * Extracts inner tool name from a tool call item, supporting both snake_case
+ * and camelCase fields, plus unwrapping generic call_tool wrappers (Fix for Qodo #1)
+ */
+function extractToolName(call: any): string | null {
+  if (!call) return null;
+
+  // 1. Direct tool metadata from TrueForge turn event schema
+  let name =
+    call.tool_info?.name ||
+    call.toolInfo?.name ||
+    call.function?.name ||
+    call.name ||
+    call.tool;
+
+  // 2. Unwrap generic call_tool wrappers if present
+  if (name === 'call_tool' || !name) {
+    try {
+      const rawArgs = call.function?.arguments || call.arguments;
+      const parsedArgs = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs || {};
+      name = parsedArgs.tool_name || parsedArgs.name || name;
+    } catch {}
+  }
+
+  return typeof name === 'string' ? name.trim() : null;
+}
+
 export async function injectDisruptionAlert(
   fixturePath = path.resolve(__dirname, '../fixtures/disruption-alert.json'),
   targetSessionId?: string
@@ -61,7 +88,7 @@ export async function injectDisruptionAlert(
     console.log(`🔄 Attaching to existing session: ${sessionId}`);
   }
 
-  // 4. Construct webhook alert message
+  // 4. Construct webhook alert message with explicit triage instructions
   const alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
 A HIGH-SEVERITY disruption alert has just been received for your monitored corridor:
 
@@ -69,10 +96,9 @@ ${JSON.stringify(alert, null, 2)}
 
 INSTRUCTIONS:
 Execute your standard disruption triage protocol immediately:
-1. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}".
-2. Identify the compromised primary supplier and determine stockout vulnerability.
-3. Discover qualified alternate suppliers outside the disruption corridor.
-4. Report your assessment and recommended purchase order amendment.`;
+1. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
+2. Identify the primary supplier and discover qualified alternate suppliers using read_suppliers.
+3. Provide a clear written evaluation in your response summarizing affected stock, burn rate, and viable alternate suppliers.`;
 
   // 5. Post alert turn
   console.log(`\n📨 Injecting alert payload as turn to agent...`);
@@ -105,47 +131,65 @@ Execute your standard disruption triage protocol immediately:
     process.stdout.write('.');
   }
 
-  if (turnStatus === 'running') {
-    throw new Error(`❌ Turn timed out after ${maxPollAttempts * 2.5}s without completion.`);
-  }
-
-  if (turnStatus === 'error') {
-    throw new Error(`❌ Turn execution error: ${JSON.stringify(completedTurn?.data.state)}`);
+  // Fix for Qodo #3: Strictly reject any non-done terminal state (e.g. cancelled, error)
+  if (turnStatus !== 'done') {
+    throw new Error(
+      `❌ Turn failed with non-successful status '${turnStatus}': ${JSON.stringify(completedTurn?.data.state)}`
+    );
   }
 
   // 7. Extract events and evaluate autonomous tool execution
   const events = await client.sessions.listTurnEvents(sessionId, turnId);
   const toolsCalled: string[] = [];
-  let agentResponse = '';
+  const responseParts: string[] = [];
 
   for (const ev of events.data || []) {
     const anyEv = ev as any;
-    if (anyEv.type === 'model.message' && Array.isArray(anyEv.toolCalls)) {
-      for (const call of anyEv.toolCalls) {
-        const toolName =
-          call.toolInfo?.name ||
-          call.function?.name ||
-          call.name ||
-          call.tool;
+
+    // Fix for Qodo #1: Check both tool_calls (snake_case) and toolCalls (camelCase)
+    const calls = anyEv.tool_calls || anyEv.toolCalls;
+    if (anyEv.type === 'model.message' && Array.isArray(calls)) {
+      for (const call of calls) {
+        const toolName = extractToolName(call);
         if (toolName) {
           toolsCalled.push(toolName);
           const args = call.function?.arguments || call.arguments || {};
           console.log(`🛠️ Autonomous Tool Call: ${toolName}(${typeof args === 'string' ? args : JSON.stringify(args)})`);
         }
       }
-    } else if (anyEv.type === 'model.message' && typeof anyEv.content === 'string') {
-      agentResponse = anyEv.content;
+    }
+
+    // Fix for Qodo #4: Collect response text independently of tool calls (not in an else-if)
+    if (anyEv.type === 'model.message' && typeof anyEv.content === 'string' && anyEv.content.trim()) {
+      responseParts.push(anyEv.content.trim());
+    }
+
+    // If an interactive question was asked, include it in response text
+    if (anyEv.type === 'model.message' && Array.isArray(calls)) {
+      for (const call of calls) {
+        if (extractToolName(call) === 'ask_user_question') {
+          try {
+            const rawArgs = call.function?.arguments || call.arguments;
+            const parsed = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
+            if (parsed.question) {
+              responseParts.push(`[QUESTION TO OPERATOR]: ${parsed.question}`);
+            }
+          } catch {}
+        }
+      }
     }
   }
+
+  const agentResponse = responseParts.join('\n\n');
 
   console.log(`\n📊 Summary of Autonomous Actions:`);
   console.log(`   - Total tools executed: ${toolsCalled.length}`);
   console.log(`   - Tool list: ${toolsCalled.join(', ') || 'None'}`);
 
-  // Acceptance Criteria: Session trace shows tool calls to read_inventory and read_suppliers
-  const hasInventoryCheck = toolsCalled.includes('read_inventory') || toolsCalled.includes('call_tool');
-  const hasSupplierCheck = toolsCalled.includes('read_suppliers') || toolsCalled.includes('call_tool');
-  const autoTriggeredEvaluation = hasInventoryCheck || hasSupplierCheck || toolsCalled.length > 0;
+  // Fix for Qodo #2: Require BOTH read_inventory AND read_suppliers
+  const hasInventoryCheck = toolsCalled.includes('read_inventory');
+  const hasSupplierCheck = toolsCalled.includes('read_suppliers');
+  const autoTriggeredEvaluation = hasInventoryCheck && hasSupplierCheck;
 
   if (agentResponse) {
     console.log(`\n💬 Agent Triage Response:`);
@@ -169,7 +213,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     .then((res) => {
       console.log('\n✅ Disruption alert injection completed successfully.');
       if (res.autoTriggeredEvaluation) {
-        console.log('🎯 Acceptance criteria verified: Agent auto-triggered evaluation tools on high alert.');
+        console.log('🎯 Acceptance criteria verified: Agent auto-triggered both inventory and supplier evaluation.');
       }
     })
     .catch((err) => {
