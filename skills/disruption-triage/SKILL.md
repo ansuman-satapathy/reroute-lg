@@ -92,12 +92,27 @@ The agent must strictly enforce these quantitative boundaries when evaluating al
 
 ---
 
-## 4. PO Amendment Protocol & Generative UI
+## 4. PO Amendment Protocol & Generative UI Diff
 
-- When proposing an amendment, always provide a clear comparison of:
-  * Primary supplier vs Selected alternate
-  * Total financial variance
-  * Days of safety buffer preserved
-- **Hard Gate Enforcement**: Never assume human approval. The write tool `propose_po_amendment` is gated by TrueForge.
-- If the operator denies approval, promptly invoke `record_po_rejection` to record the operator's rejection notes into the permanent audit ledger.
-- Never attempt direct SQL modifications on `suppliers` or `inventory` tables.
+Before invoking `propose_po_amendment`, the agent MUST render a visual Generative UI Diff (table/card) comparing the baseline PO against the proposed amendment:
+
+### Generative UI PO Diff Specification:
+- **Supplier Name**: Current (Oceanic Bearings Ltd) vs Proposed Alternate (e.g. IndoPacific Parts Corp)
+- **Origin Region & Route**: Compromised East China Sea corridor vs Safe alternate corridor
+- **Unit Cost**: Current unit price vs Alternate unit price and dollar delta / percentage variance
+- **Lead Time**: Current lead time vs Alternate lead time (must arrive before stockout window)
+- **Reliability Score**: Current reliability vs Alternate reliability (must be ≥ 0.75)
+- **Total PO Value**: Baseline order cost vs Proposed order cost and budget impact
+- **Guardrail Compliance**: Summary verifying +50% cost ceiling, reliability floor, and stockout buffer
+
+### Human Approval Gate Execution:
+1. **Render the Diff in Chat**: Output the before/after Generative UI Diff comparison table directly in your chat response text to the operator. Do not hide it solely in a sandbox script file.
+2. **Trigger Gate**: Invoke `propose_po_amendment` with the structured parameters. TrueForge will pause execution with `tool.approval_required`.
+3. **Approve Path (Allow)**:
+   - When the operator grants approval, the tool executes and commits an `approved` row to `purchase_orders`.
+   - Confirm the approved PO ID, timestamp, and supplier re-route to the operator.
+4. **Reject Path (Deny)**:
+   - When the operator denies approval, `propose_po_amendment` is blocked and never executes.
+   - The agent receives the denial and operator reason.
+   - The agent MUST immediately invoke `record_po_rejection` to log an audit entry in `purchase_orders` with `status = 'rejected'` and the denial rationale.
+   - Never attempt direct SQL modifications on `suppliers` or `inventory` tables.
