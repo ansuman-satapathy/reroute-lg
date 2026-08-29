@@ -26,6 +26,19 @@ export interface ReadOnlyDatabaseConnection {
   close(): void;
 }
 
+/**
+ * Controlled Write Database Connection Interface
+ * Permits mutation only for purchase_orders ledger
+ */
+export interface WriteDatabaseConnection {
+  prepare(sql: string): {
+    all(...params: any[]): any[];
+    get(...params: any[]): any;
+    run(...params: any[]): { lastInsertRowid: number | bigint; changes: number };
+  };
+  close(): void;
+}
+
 type DriverType = 'node:sqlite' | 'better-sqlite3';
 
 interface ResolvedDriver {
@@ -67,23 +80,23 @@ async function getDriver(): Promise<ResolvedDriver> {
   );
 }
 
-let dbInstance: ReadOnlyDatabaseConnection | null = null;
-let dbInitPromise: Promise<ReadOnlyDatabaseConnection> | null = null;
+let readDbInstance: ReadOnlyDatabaseConnection | null = null;
+let readDbInitPromise: Promise<ReadOnlyDatabaseConnection> | null = null;
 
 /**
  * Thread-safe singleton providing a read-only SQLite database connection.
  * Deduplicates concurrent initializations to prevent connection leaks.
  */
 export async function getErpDb(): Promise<ReadOnlyDatabaseConnection> {
-  if (dbInstance) {
-    return dbInstance;
+  if (readDbInstance) {
+    return readDbInstance;
   }
 
-  if (dbInitPromise) {
-    return dbInitPromise;
+  if (readDbInitPromise) {
+    return readDbInitPromise;
   }
 
-  dbInitPromise = (async () => {
+  readDbInitPromise = (async () => {
     try {
       const dbPath = resolveDatabasePath();
 
@@ -96,30 +109,88 @@ export async function getErpDb(): Promise<ReadOnlyDatabaseConnection> {
       const driver = await getDriver();
       let rawDb: any;
 
-      // Open strictly in read-only mode to enforce the read-only boundary at the driver level
+      // Open strictly in read-only mode
       if (driver.type === 'node:sqlite') {
         rawDb = new driver.ctor(dbPath, { readOnly: true });
       } else {
         rawDb = new driver.ctor(dbPath, { readonly: true });
       }
 
-      dbInstance = {
+      readDbInstance = {
         prepare: (sql: string) => ({
           all: (...params: any[]) => rawDb.prepare(sql).all(...params),
           get: (...params: any[]) => rawDb.prepare(sql).get(...params),
         }),
         close: () => {
           rawDb.close();
-          dbInstance = null;
-          dbInitPromise = null;
+          readDbInstance = null;
+          readDbInitPromise = null;
         },
       };
 
-      return dbInstance;
+      return readDbInstance;
     } finally {
-      dbInitPromise = null;
+      readDbInitPromise = null;
     }
   })();
 
-  return dbInitPromise;
+  return readDbInitPromise;
+}
+
+let writeDbInstance: WriteDatabaseConnection | null = null;
+let writeDbInitPromise: Promise<WriteDatabaseConnection> | null = null;
+
+/**
+ * Thread-safe singleton providing a read-write SQLite database connection.
+ * Dedicated to purchase_orders ledger mutations.
+ */
+export async function getErpWriteDb(): Promise<WriteDatabaseConnection> {
+  if (writeDbInstance) {
+    return writeDbInstance;
+  }
+
+  if (writeDbInitPromise) {
+    return writeDbInitPromise;
+  }
+
+  writeDbInitPromise = (async () => {
+    try {
+      const dbPath = resolveDatabasePath();
+
+      if (!fs.existsSync(dbPath)) {
+        throw new Error(
+          `ERP database file not found at ${dbPath}. Please run 'npm run db:init' from the project root first.`
+        );
+      }
+
+      const driver = await getDriver();
+      let rawDb: any;
+
+      // Open in read-write mode
+      if (driver.type === 'node:sqlite') {
+        rawDb = new driver.ctor(dbPath, { readOnly: false });
+      } else {
+        rawDb = new driver.ctor(dbPath, { readonly: false });
+      }
+
+      writeDbInstance = {
+        prepare: (sql: string) => ({
+          all: (...params: any[]) => rawDb.prepare(sql).all(...params),
+          get: (...params: any[]) => rawDb.prepare(sql).get(...params),
+          run: (...params: any[]) => rawDb.prepare(sql).run(...params),
+        }),
+        close: () => {
+          rawDb.close();
+          writeDbInstance = null;
+          writeDbInitPromise = null;
+        },
+      };
+
+      return writeDbInstance;
+    } finally {
+      writeDbInitPromise = null;
+    }
+  })();
+
+  return writeDbInitPromise;
 }
