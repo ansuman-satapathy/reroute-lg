@@ -64,13 +64,13 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          │
          ▼
 [Step 4: Multi-Criteria Optimization & Ranked Recommendation]
-   - Generate and execute a Python cost-optimization script in TrueForge's sandbox via `exec` (or call `run_cost_optimization`)
+   - Execute multi-criteria optimization by generating and executing a Python scoring script in TrueForge's sandbox via the native `exec` tool (or calling `run_cost_optimization`)
    - Weigh trade-offs using Multi-Criteria Decision Analysis:
      * Landed Cost: 40% (0.40) weight
      * Lead Time: 30% (0.30) weight
      * Reliability: 30% (0.30) weight
    - Output a human-readable ranked table (Rank, Supplier Name, Landed Cost, Lead Time, Reliability, Composite Score, Status)
-   - Ensure the balanced compliant supplier outranks cheap-but-slow alternatives that exceed stockout thresholds
+   - Ensure the balanced compliant supplier (IndoPacific) outranks cheap-but-slow alternatives that exceed stockout thresholds
          │
          ▼
 [Step 5: Human Approval Gate & PO Amendment]
