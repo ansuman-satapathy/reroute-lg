@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![TrueForge](https://img.shields.io/badge/Agent_Harness-TrueForge-orange.svg)](https://github.com/truefoundry/trueforge)
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Standard%201.6-purple.svg)](https://modelcontextprotocol.io/)
-[![NVIDIA NIM](https://img.shields.io/badge/Model-Nemotron--3--Super--120B-76B900.svg)](https://www.nvidia.com/en-us/ai-data-science/products/nim/)
+[![Model](https://img.shields.io/badge/Model-Nemotron--3--Super--120B%20(NVIDIA%20NIM)-76B900.svg)](https://www.nvidia.com/en-us/ai-data-science/products/nim/)
 [![Database](https://img.shields.io/badge/Database-SQLite-blue.svg)](https://www.sqlite.org/)
 [![Code Review](https://img.shields.io/badge/Code_Review-Qodo_Verified-blueviolet.svg)](https://www.qodo.ai/)
 
@@ -55,7 +55,7 @@ flowchart TD
     end
 
     subgraph Harness["2. TrueForge Agent Harness (Port 8790)"]
-        IngestScript -->|"Create Session & Turn"| TFAgent["Disruption Triage Agent<br/>(Nemotron-3-Super-120B)"]
+        IngestScript -->|"Create Session & Turn"| TFAgent["Disruption Triage Agent<br/>(Nemotron-3-Super via NIM)"]
         SOP["SOP Skill<br/>(disruption-triage)"] -.->|"System Instructions"| TFAgent
     end
 
@@ -93,7 +93,7 @@ sequenceDiagram
     autonumber
     actor Operator as Human Logistics Operator
     participant TF as TrueForge Harness
-    participant Agent as Nemotron Triage Agent
+    participant Agent as Disruption Triage Agent
     participant Telemetry as Telemetry MCP
     participant ERP as ERP MCP
     participant DB as SQLite ERP Ledger
@@ -163,7 +163,7 @@ sequenceDiagram
 TrueForge serves as the agent runtime harness providing:
 1. **Tool Approval Gating**: Enforces permission policies on sensitive operations. In our agent manifest, `propose_po_amendment` is flagged with `approval: required`, while read-only inspection tools (`read_inventory`, `read_suppliers`, `get_weather_alerts`) execute autonomously without interruption.
 2. **Standardized MCP Connector Hub**: Manages bidirectional Server-Sent Events (SSE) connections to both `erp-mcp` (`http://localhost:3001/sse`) and `telemetry-mcp` (`http://localhost:3002/sse`).
-3. **Deterministic Model Steering**: Configures model execution parameters (`temperature: 0.6`, `topP: 0.95`) for NVIDIA Nemotron 3 Super, eliminating schema hallucinations across automated test runs.
+3. **Deterministic Model Steering**: Configures model execution parameters (`temperature: 0.6`, `topP: 0.95`) for the connected model, eliminating schema hallucinations across automated test runs.
 4. **Typed Audit Trails**: Preserves an event log of every turn (`turn.created`, `tool_calls`, `tool.approval_required`, `user.tool_approval`, `tool.response`), making triage runs reconstructable for review.
 
 ### The Generative UI PO Diff
@@ -187,7 +187,7 @@ Before triggering the approval gate, the agent formats and renders a **Generativ
 ### 1. Prerequisites
 - **Node.js**: `v22.13.0` or higher (`node -v`)
 - **npm**: `v10` or higher
-- **TrueForge Instance**: Running locally at `http://localhost:8790` with NVIDIA NIM configured (`nvidia-nim/nemotron-3-super-120b-a12b`).
+- **TrueForge Instance**: Running locally at `http://localhost:8790` with a configured model. Built and verified against **NVIDIA Nemotron 3 Super (120B)** via NIM; TrueForge's harness auto-discovers configured models and supports swapping in other providers.
 
 ### 2. Installation & Environment
 Clone the repository and install dependencies:
@@ -298,7 +298,7 @@ Across the development lifecycle, every pull request was audited by **Qodo** acr
 | **SQL Security Policy** | High | Enforced strict write allowlist in `getErpWriteDb()` restricting schema mutations exclusively to the `purchase_orders` table. |
 | **Canonical SKU Identity** | High | Added canonical `sku` column and `idx_po_sku` index to `purchase_orders`, eliminating fuzzy note matching and ensuring exact 24h idempotency. |
 | **Negative Alert Prompt** | High | Dynamically generated alert prompts so low-severity advisories exercise SOP negative paths without initiating re-routing. |
-| **Overload Continuation** | High | Implemented multi-turn trace aggregation in `inject-alert.ts` to retain all prior tool calls if NVIDIA NIM experiences transient overload. |
+| **Overload Continuation** | High | Implemented multi-turn trace aggregation in `inject-alert.ts` to retain all prior tool calls if the model provider experiences transient 503 overload. |
 | **Gate Test Rigor** | Medium | Enforced `status === 'done'` strictly on both approval and denial paths, disallowing masking of post-execution turn errors. |
 | **Tool Extractor Sharing** | Medium | Standardized `extractToolName` across benchmark and ingestion scripts to unwrap generic `call_tool` wrappers and detect camelCase fields. |
 
