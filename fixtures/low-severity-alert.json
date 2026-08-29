@@ -1,0 +1,11 @@
+{
+  "event_id": "EVT-2026-LOW-0830",
+  "type": "advisory",
+  "severity": "low",
+  "region": "East China Sea",
+  "title": "Minor Harbor Channel Dredging Advisory - Ningbo Outer Roads",
+  "summary": "Routine maintenance dredging scheduled in peripheral anchorage berths at Ningbo-Zhoushan. Commercial berths and container terminals remain fully operational. Expected delay: 0 hours.",
+  "source": "Ningbo Maritime Safety Administration",
+  "timestamp": "2026-08-29T12:00:00.000Z",
+  "confidence": 0.99
+}

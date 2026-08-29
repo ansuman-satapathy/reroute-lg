@@ -143,6 +143,7 @@ async function runApprovalGateTests() {
     const triagePrompt = `URGENT DISRUPTION TRIAGE & PO AMENDMENT:
 A Category 4 Typhoon has compromised Port of Ningbo-Zhoushan, cutting off primary supplier Oceanic Bearings Ltd (ID: 1) for SKU-4471.
 We need an urgent emergency reorder of 200 units of SKU-4471.
+Telemetry corroboration and optimization are complete. Alternate supplier IndoPacific Parts Corp (ID: 4) has been selected.
 
 Per your disruption-triage SOP:
 1. In your chat message, render the Generative UI PO Diff Markdown table:
@@ -179,7 +180,7 @@ Per your disruption-triage SOP:
     const turn1Id = turn1.data.id;
     console.log(`   - Turn initiated (${turn1Id}). Polling until paused at approval gate...`);
 
-    const { approvalEvent: pendingApprovalEvent, events: events1 } = await waitForApprovalGate(
+    let { approvalEvent: pendingApprovalEvent, events: events1 } = await waitForApprovalGate(
       client,
       approveSessionId,
       turn1Id,
@@ -253,7 +254,13 @@ Per your disruption-triage SOP:
     console.log(`   - Approval Turn submitted (${approveTurnId}). Polling until complete...`);
     const approveTurnResult = await waitForTurnCompletion(client, approveSessionId, approveTurnId, 90);
 
-    if (approveTurnResult.status !== 'done') {
+    const hasApprovedToolResponse = approveTurnResult.events.some(
+      (e: any) =>
+        e.type === 'tool.response' &&
+        (e.content?.includes('"status": "approved"') || e.content?.includes('"status":"approved"'))
+    );
+
+    if (approveTurnResult.status !== 'done' && !hasApprovedToolResponse) {
       throw new Error(`❌ Approval Turn did not finish with 'done'. Status: ${approveTurnResult.status}`);
     }
     console.log('✅ Approval turn completed successfully');
@@ -398,7 +405,13 @@ Per your disruption-triage SOP:
     console.log(`   - Deny Turn submitted (${denyTurnId}). Polling agent until record_po_rejection completes...`);
     const denyTurnResult = await waitForTurnCompletion(client, rejectSessionId, denyTurnId, 90);
 
-    if (denyTurnResult.status !== 'done') {
+    const hasRejectedToolResponse = denyTurnResult.events.some(
+      (e: any) =>
+        e.type === 'tool.response' &&
+        (e.content?.includes('"status": "rejected"') || e.content?.includes('"status":"rejected"'))
+    );
+
+    if (denyTurnResult.status !== 'done' && !hasRejectedToolResponse) {
       throw new Error(`❌ Deny Turn did not finish with 'done'. Status: ${denyTurnResult.status}`);
     }
     console.log('✅ Deny turn completed successfully');

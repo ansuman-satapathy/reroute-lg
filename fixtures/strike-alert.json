@@ -1,0 +1,15 @@
+{
+  "event_id": "EVT-2026-LABOR-0832",
+  "type": "labor_dispute",
+  "severity": "high",
+  "region": "East China Sea",
+  "title": "Dockworkers Union Strike Notice - Ningbo Container Terminals",
+  "summary": "Port labor unions have declared an indefinite 48-hour general strike affecting all gantry crane and container yard operations at Ningbo-Zhoushan, blocking primary shipping channels.",
+  "impacted_corridors": [
+    "Ningbo-Zhoushan Port Complex",
+    "East China Sea Feeder Network"
+  ],
+  "source": "International Transport Workers Federation",
+  "timestamp": "2026-08-29T13:00:00.000Z",
+  "confidence": 0.96
+}

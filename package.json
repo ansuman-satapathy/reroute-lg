@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "db:init": "tsx db/init-db.ts",
+    "db:reset": "tsx db/init-db.ts",
     "db:verify": "tsx db/verify-db.ts",
     "dev:erp": "tsx mcp-servers/erp/src/index.ts",
     "test:erp": "tsx mcp-servers/erp/test-tools.ts",
@@ -21,6 +22,9 @@
     "config:agent": "tsx trueforge/agent-config.ts",
     "test:agent": "tsx trueforge/test-agent.ts",
     "inject-alert": "tsx scripts/inject-alert.ts",
+    "inject-alert:low": "tsx scripts/inject-alert.ts --fixture fixtures/low-severity-alert.json",
+    "inject-alert:strike": "tsx scripts/inject-alert.ts --fixture fixtures/strike-alert.json",
+    "demo:time": "tsx scripts/demo-time.ts",
     "test:inject-alert": "tsx test/test-inject-alert.ts",
     "test:skill": "tsx test/test-skill-routing.ts",
     "test:subagents": "tsx test/test-subagents.ts",

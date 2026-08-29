@@ -29,6 +29,19 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
 [Incoming High Alert]
          │
          ▼
+[Step 0: Live Telemetry Corroboration]
+   - MANDATORY FIRST STEP before any ERP queries.
+   - Route the corroboration call by alert type:
+     * Weather-type alerts (typhoon, storm, flooding, port weather closure) → call `get_weather_alerts` for the affected region coordinates
+     * Labor / geopolitical alerts (strike, embargo, sanctions, port blockade) → call `get_news_disruptions` for the affected region
+     * If the alert type does not map cleanly to either signal source → skip corroboration entirely and proceed to Step 1 on the incoming alert alone
+   - The INCOMING ALERT's severity is always authoritative for triggering triage, regardless of what telemetry returns. Apply the following outcomes:
+     * Telemetry CONFIRMS alert severity → proceed to Step 1 and note confirmation in your response (e.g. "Live weather data confirms severe conditions at lat 30.6°N, 126.0°E")
+     * Telemetry DIVERGES from alert severity (e.g. weather shows clear sky despite typhoon alert) → proceed to Step 1 on the alert alone; explicitly flag the discrepancy (e.g. "Note: live weather models currently show moderate conditions — signals may lag rapidly developing storm systems. Proceeding on authoritative alert.")
+     * Telemetry call FAILS, times out, or returns no data → proceed to Step 1 on the alert alone; note that live corroboration was unavailable (e.g. "Telemetry feed unavailable — proceeding on incoming alert severity.")
+   - Always surface whatever telemetry findings were returned (wind speed, storm codes, news headlines) in your response before proceeding to Step 1
+         │
+         ▼
 [Step 1: Inventory Buffer Analysis]
    - Query `read_inventory` for affected SKU(s) (returns `current_stock`, `reorder_threshold`, `daily_burn_rate`, and `days_of_supply`)
    - Confirm Days of Supply (DoS = `current_stock / daily_burn_rate`). For SKU-4471: 140 / 10 = 14 days.

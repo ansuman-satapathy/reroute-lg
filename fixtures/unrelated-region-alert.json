@@ -1,0 +1,15 @@
+{
+  "event_id": "EVT-2026-SA-0831",
+  "type": "seismic_disruption",
+  "severity": "high",
+  "region": "South America West Coast",
+  "coordinates": {
+    "latitude": -33.0,
+    "longitude": -71.6
+  },
+  "title": "Magnitude 7.2 Offshore Earthquake - Port of San Antonio Closed",
+  "summary": "Major seismic event off the coast of Central Chile. Port of San Antonio container terminals temporarily evacuated for tsunami risk assessment.",
+  "source": "South America Maritime Emergency Bureau",
+  "timestamp": "2026-08-29T12:30:00.000Z",
+  "confidence": 0.95
+}

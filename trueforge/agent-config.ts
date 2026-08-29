@@ -113,6 +113,8 @@ export async function configureDisruptionTriageAgent(
   const agentManifest: any = {
     model: {
       name: preferredModel.name,
+      temperature: 0.6,
+      topP: 0.95,
     },
     instructions,
     mcpServers: [
