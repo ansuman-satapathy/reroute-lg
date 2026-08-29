@@ -35,10 +35,51 @@ function cleanText(raw: string): string {
 }
 
 /**
- * Classifies supply-chain news severity based on disruption impact indicators
+ * Safely converts arbitrary RSS publication date strings to ISO-8601
+ * Guarantees that invalid date formats never throw RangeError (Fix for Qodo #3)
  */
-function classifyNewsSeverity(text: string): { severity: DisruptionSeverity; score: number } {
+export function safeParseIsoDate(rawDate?: string): string {
+  if (!rawDate) return new Date().toISOString();
+  try {
+    const timestamp = Date.parse(rawDate);
+    if (!isNaN(timestamp)) {
+      return new Date(timestamp).toISOString();
+    }
+  } catch {}
+  return new Date().toISOString();
+}
+
+/**
+ * Classifies supply-chain news severity based on disruption impact indicators.
+ * Accounts for resolution and negation phrases (Fix for Qodo #5).
+ */
+export function classifyNewsSeverity(text: string): { severity: DisruptionSeverity; score: number } {
   const lower = text.toLowerCase();
+
+  // Check for resolved / negated indicators (Fix for Qodo #5)
+  // Headlines like "ports reopen as storm weakens" or "strike called off" should NOT trigger high alerts
+  const resolvedIndicators = [
+    'reopen',
+    'reopens',
+    'reopened',
+    'avoided',
+    'averted',
+    'called off',
+    'lifted',
+    'weakens',
+    'weakened',
+    'downgraded',
+    'resumes',
+    'resumed',
+    'normalized',
+    'back to normal',
+  ];
+
+  const hasResolution = resolvedIndicators.some((term) => lower.includes(term));
+
+  if (hasResolution) {
+    return { severity: 'low', score: 0.8 };
+  }
 
   const highIndicators = [
     'shut down',
@@ -123,11 +164,13 @@ export async function handleGetNewsDisruptions(params: {
       const pubDateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
       const sourceMatch = itemXml.match(/<source[^>]*>([\s\S]*?)<\/source>/);
 
-      const title = titleMatch ? cleanText(titleMatch[1]) : 'Supply Chain Disruption Notice';
+      const title = titleMatch ? cleanText(titleMatch[1]) : 'Supply Chain Notice';
       const link = linkMatch ? cleanText(linkMatch[1]) : '';
-      const pubDate = pubDateMatch ? cleanText(pubDateMatch[1]) : new Date().toISOString();
+      // Fix for Qodo #3: Safe ISO parsing prevents malformed external dates from aborting the feed
+      const pubDate = safeParseIsoDate(pubDateMatch ? cleanText(pubDateMatch[1]) : undefined);
       const source = sourceMatch ? cleanText(sourceMatch[1]) : 'Public Maritime RSS Feed';
 
+      // Fix for Qodo #5: Accurate classification with negation/resolution awareness
       const { severity, score } = classifyNewsSeverity(title);
 
       signals.push({
@@ -137,13 +180,14 @@ export async function handleGetNewsDisruptions(params: {
         title,
         summary: `Supply-chain news signal detected for ${params.region}: "${title}". Assessed as ${severity.toUpperCase()} impact risk.`,
         details: {
+          is_telemetry_unavailable: false,
           article_title: title,
           url: link,
           published_date: pubDate,
           publisher: source,
           search_query: searchQuery,
         },
-        timestamp: new Date(pubDate).toISOString() || new Date().toISOString(),
+        timestamp: pubDate,
         source,
         confidence: score,
       });
@@ -157,7 +201,7 @@ export async function handleGetNewsDisruptions(params: {
         region: params.region,
         title: `No active breaking disruptions reported for ${params.region}`,
         summary: `Automated news feed scan completed for query "${searchQuery}". No critical port closures or disruptions found in current news items.`,
-        details: { search_query: searchQuery },
+        details: { is_telemetry_unavailable: false, search_query: searchQuery },
         timestamp: new Date().toISOString(),
         source: 'Public Maritime RSS Feed',
         confidence: 0.7,
@@ -171,17 +215,17 @@ export async function handleGetNewsDisruptions(params: {
       signals,
     };
   } catch (err: any) {
-    // Graceful offline fallback
+    // Fix for Qodo #2: Outages are marked with severity 'low' and is_telemetry_unavailable: true
     const fallbackSignal: DisruptionSignal = {
       type: 'news',
-      severity: 'medium',
+      severity: 'low',
       region: params.region,
-      title: `News Telemetry Notice: ${params.region}`,
-      summary: `News telemetry query for "${searchQuery}" encountered network timeout/offline mode: ${err.message}. Monitoring active maritime RSS channels.`,
-      details: { error: err.message, query: searchQuery },
+      title: `News Telemetry Offline: ${params.region}`,
+      summary: `News feed telemetry unavailable due to connectivity limitation (${err.message}). No active disruption verified.`,
+      details: { is_telemetry_unavailable: true, error: err.message, query: searchQuery },
       timestamp: new Date().toISOString(),
-      source: 'Public Maritime RSS Feed (Offline Fallback)',
-      confidence: 0.5,
+      source: 'Public Maritime RSS Feed (Offline Notice)',
+      confidence: 0.0,
     };
 
     return {

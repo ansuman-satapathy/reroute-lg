@@ -55,11 +55,42 @@ export async function handleGetWeatherAlerts(params: {
     }
 
     const data = (await response.json()) as any;
-    const current = data.current || {};
-    const windSpeed = current.wind_speed_10m ?? 0;
-    const windGusts = current.wind_gusts_10m ?? 0;
+
+    // Validate external response structure (Fix for Qodo #4: do not default missing payloads to favorable zeros)
+    if (
+      !data ||
+      typeof data !== 'object' ||
+      !data.current ||
+      typeof data.current.wind_speed_10m !== 'number'
+    ) {
+      const incompleteSignal: DisruptionSignal = {
+        type: 'weather',
+        severity: 'low',
+        region,
+        title: `Weather Telemetry Unavailable: ${region}`,
+        summary: `Open-Meteo returned incomplete observation data for ${region}. Telemetry metrics unavailable.`,
+        details: {
+          is_telemetry_unavailable: true,
+          coordinates: { latitude: params.latitude, longitude: params.longitude },
+        },
+        timestamp: new Date().toISOString(),
+        source: 'Open-Meteo (Incomplete Data)',
+        confidence: 0.1,
+      };
+
+      return {
+        total_signals: 1,
+        region,
+        coordinates: { latitude: params.latitude, longitude: params.longitude },
+        signals: [incompleteSignal],
+      };
+    }
+
+    const current = data.current;
+    const windSpeed = current.wind_speed_10m;
+    const windGusts = current.wind_gusts_10m ?? windSpeed;
     const precipitation = current.precipitation ?? 0;
-    const weatherCode = current.weather_code ?? 0;
+    const weatherCode = current.weather_code ?? -1;
     const weatherCondition = decodeWeatherCode(weatherCode);
 
     // Compute maritime disruption severity thresholds
@@ -81,6 +112,7 @@ export async function handleGetWeatherAlerts(params: {
       title: `${severity.toUpperCase()} Weather Alert: ${region}`,
       summary,
       details: {
+        is_telemetry_unavailable: false,
         coordinates: { latitude: params.latitude, longitude: params.longitude },
         wind_speed_kmh: windSpeed,
         wind_gusts_kmh: windGusts,
@@ -111,20 +143,21 @@ export async function handleGetWeatherAlerts(params: {
       },
     };
   } catch (err: any) {
-    // Graceful fallback with transparent error indication (e.g. offline sandbox or network drop)
+    // Fix for Qodo #2: Outages must NOT be promoted to medium/high physical disruptions
     const fallbackSignal: DisruptionSignal = {
       type: 'weather',
-      severity: 'medium',
+      severity: 'low',
       region,
-      title: `Weather Telemetry Notice: ${region}`,
-      summary: `Live Open-Meteo telemetry query encountered connectivity limitation: ${err.message}. Maritime advisory monitoring active.`,
+      title: `Weather Telemetry Offline: ${region}`,
+      summary: `Weather telemetry query unavailable due to connectivity limitation (${err.message}). No active disruption verified.`,
       details: {
+        is_telemetry_unavailable: true,
         error: err.message,
         coordinates: { latitude: params.latitude, longitude: params.longitude },
       },
       timestamp: new Date().toISOString(),
-      source: 'Open-Meteo (Offline Fallback)',
-      confidence: 0.6,
+      source: 'Open-Meteo (Offline Notice)',
+      confidence: 0.0,
     };
 
     return {
