@@ -1,0 +1,23 @@
+{
+  "name": "telemetry-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telemetry Read-Only MCP Server for Weather and Maritime News Disruptions",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test": "tsx test-tools.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
