@@ -30,7 +30,7 @@ export async function handleAssessDisruption(params: {
   const latitude = params.latitude ?? 30.6;
   const longitude = params.longitude ?? 126.0;
 
-  // Run weather and news queries in parallel
+  // Run weather and news queries concurrently
   const [weatherData, newsData] = await Promise.all([
     handleGetWeatherAlerts({ latitude, longitude, region_name: region }),
     handleGetNewsDisruptions({ region, keywords: ['port', 'shipping', 'typhoon', 'delay', 'closure'], limit: 3 }),
@@ -38,8 +38,11 @@ export async function handleAssessDisruption(params: {
 
   const allSignals: DisruptionSignal[] = [...weatherData.signals, ...newsData.signals];
 
-  const hasHigh = allSignals.some((s) => s.severity === 'high');
-  const hasMedium = allSignals.some((s) => s.severity === 'medium');
+  // Fix for Qodo #2: Filter out unavailable telemetry notices so outages do NOT escalate to disruptions
+  const validSignals = allSignals.filter((s) => !s.details?.is_telemetry_unavailable);
+
+  const hasHigh = validSignals.some((s) => s.severity === 'high');
+  const hasMedium = validSignals.some((s) => s.severity === 'medium');
 
   let overallSeverity: DisruptionSeverity = 'low';
   if (hasHigh) {
@@ -55,6 +58,9 @@ export async function handleAssessDisruption(params: {
   } else if (overallSeverity === 'medium') {
     recommendation =
       'ELEVATED: Disruption indicators present. Query inventory buffer and alert logistics operations team.';
+  } else if (validSignals.length === 0) {
+    recommendation =
+      'NOTICE: Telemetry observation feeds are temporarily offline or incomplete. No active disruption verified; maintaining standard monitoring.';
   }
 
   return {
