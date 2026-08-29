@@ -117,7 +117,7 @@ Execute your standard disruption triage protocol immediately:
     ],
   });
 
-  const turnId = turn.data.id;
+  let turnId = turn.data.id;
   console.log(`   - Turn dispatched (${turnId}). Monitoring autonomous agent execution...`);
 
   // 6. Poll until turn finishes (allows sufficient time for multi-step agent reasoning & tool execution)
@@ -135,6 +135,35 @@ Execute your standard disruption triage protocol immediately:
       break;
     }
     process.stdout.write('.');
+  }
+
+  // Resilient retry: if model hit a transient provider overload, backoff and send continuation turn
+  const errorMsg = String((completedTurn?.data?.state as any)?.message || '');
+  if (turnStatus === 'error' && errorMsg.toLowerCase().includes('overloaded')) {
+    console.log('\n⚠️ Model provider experienced transient overload. Backing off 4s and auto-resuming triage session...');
+    await new Promise((r) => setTimeout(r, 4000));
+    const retryTurn = await client.sessions.createTurn(sessionId, {
+      input: [
+        {
+          type: 'user.message',
+          content: 'Please resume and complete your disruption triage protocol from where you left off.',
+        },
+      ],
+    });
+    turnId = retryTurn.data.id;
+    console.log(`   - Continuation turn dispatched (${turnId}). Polling until complete...`);
+
+    for (let i = 0; i < maxPollAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      completedTurn = await client.sessions.getTurn(sessionId, turnId);
+      turnStatus = completedTurn.data.state.status;
+
+      if (turnStatus !== 'running') {
+        console.log(`\n🏁 Continuation turn status finalized: ${turnStatus}`);
+        break;
+      }
+      process.stdout.write('.');
+    }
   }
 
   // Fix for Qodo #3: Strictly reject any non-done terminal state (e.g. cancelled, error)
@@ -189,7 +218,7 @@ Execute your standard disruption triage protocol immediately:
   // If responseParts is empty because the model concluded with a gated tool call,
   // extract the amendment evaluation from the propose_po_amendment tool arguments
   if (responseParts.length === 0) {
-    for (const ev of events) {
+    for (const ev of events.data || []) {
       const anyEv = ev as any;
       const calls = anyEv.tool_calls || anyEv.toolCalls;
       if (Array.isArray(calls)) {
