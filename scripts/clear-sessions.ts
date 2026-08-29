@@ -1,6 +1,10 @@
+import 'dotenv/config';
 import { TrueForge } from '@truefoundry/trueforge-sdk';
 
-const TRUEFORGE_BASE_URL = process.env.TRUEFORGE_BASE_URL || 'http://localhost:8790';
+const TRUEFORGE_BASE_URL =
+  process.env.TRUEFORGE_URL ||
+  process.env.TRUEFORGE_BASE_URL ||
+  'http://localhost:8790';
 
 async function clearAllSessions() {
   console.log(`🧹 Connecting to TrueForge at: ${TRUEFORGE_BASE_URL}...`);
