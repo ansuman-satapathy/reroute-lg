@@ -1,0 +1,14 @@
+{
+  "carrier_id": "maersk-pacific",
+  "carrier_name": "Maersk Pacific Lines",
+  "service_tier": "Premium Guaranteed Express",
+  "available_teu_capacity": 45,
+  "transit_time_days": 8,
+  "rate_per_teu_usd": 2850.00,
+  "reliability_score": 0.95,
+  "cutoff_window_hours": 24,
+  "next_departure": "2026-08-31T06:00:00Z",
+  "routing_corridor": "Busan / Singapore to North American West Coast",
+  "vessel_status": "On-Schedule",
+  "notes": "Guaranteed space allocation with priority berth access at destination container terminal."
+}

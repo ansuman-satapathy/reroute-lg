@@ -14,6 +14,7 @@ process.env.DATABASE_PATH = testDbPath;
 import { getErpDb, getErpWriteDb } from './src/db.js';
 import { createErpMcpServer } from './src/index.js';
 import { handleProposePoAmendment } from './src/tools/propose-po-amendment.js';
+import { handleQueryCarrierCapacity } from './src/tools/query-carrier-capacity.js';
 import { handleReadInventory } from './src/tools/read-inventory.js';
 import { handleReadPurchaseOrders } from './src/tools/read-purchase-orders.js';
 import { handleReadSuppliers } from './src/tools/read-suppliers.js';
@@ -39,7 +40,12 @@ async function runErpTests() {
     console.log('🔍 Registered tools in McpServer:', toolNames);
 
     // Verify read tools have readOnlyHint: true
-    const expectedReadTools = ['read_inventory', 'read_suppliers', 'read_purchase_orders'];
+    const expectedReadTools = [
+      'read_inventory',
+      'read_suppliers',
+      'read_purchase_orders',
+      'query_carrier_capacity',
+    ];
     for (const expected of expectedReadTools) {
       if (!toolNames.includes(expected)) {
         throw new Error(`❌ Missing expected read tool registration: ${expected}`);
@@ -63,7 +69,39 @@ async function runErpTests() {
     }
     console.log('✅ Qodo #1 Fixed: propose_po_amendment and record_po_rejection correctly registered with readOnlyHint: false');
 
-    // 2. Test Enforced Write Boundary (Qodo #3)
+    // 2. Test query_carrier_capacity Tool on All 3 Carrier Fixtures (Ticket #08)
+    console.log('\n🔍 Testing query_carrier_capacity tool on all 3 carrier fixtures...');
+    const maersk = await handleQueryCarrierCapacity({ carrier: 'maersk-pacific' });
+    if (!maersk.success || maersk.carrier_id !== 'maersk-pacific' || maersk.rate_per_teu_usd !== 2850) {
+      throw new Error(`❌ Maersk fixture query failed: ${JSON.stringify(maersk)}`);
+    }
+    console.log(`✅ Maersk Pacific capacity query verified: ${maersk.available_teu_capacity} TEU, $${maersk.rate_per_teu_usd}/TEU, ${maersk.transit_time_days} days`);
+
+    const evergreen = await handleQueryCarrierCapacity({ carrier: 'evergreen-express' });
+    if (!evergreen.success || evergreen.carrier_id !== 'evergreen-express' || evergreen.rate_per_teu_usd !== 1920) {
+      throw new Error(`❌ Evergreen fixture query failed: ${JSON.stringify(evergreen)}`);
+    }
+    console.log(`✅ Evergreen Express capacity query verified: ${evergreen.available_teu_capacity} TEU, $${evergreen.rate_per_teu_usd}/TEU, ${evergreen.transit_time_days} days`);
+
+    const cma = await handleQueryCarrierCapacity({ carrier: 'cma-cgm-asia' });
+    if (!cma.success || cma.carrier_id !== 'cma-cgm-asia' || cma.rate_per_teu_usd !== 4200) {
+      throw new Error(`❌ CMA CGM fixture query failed: ${JSON.stringify(cma)}`);
+    }
+    console.log(`✅ CMA CGM Asia capacity query verified: ${cma.available_teu_capacity} TEU, $${cma.rate_per_teu_usd}/TEU, ${cma.transit_time_days} days`);
+
+    // Test unknown carrier rejection
+    try {
+      await handleQueryCarrierCapacity({ carrier: 'invalid-phantom-carrier' });
+      throw new Error('❌ Allowed query for unknown carrier!');
+    } catch (err: any) {
+      if (err.message.includes('Unknown carrier')) {
+        console.log('✅ Unknown carrier rejected with available options list');
+      } else {
+        throw err;
+      }
+    }
+
+    // 3. Test Enforced Write Boundary (Qodo #3)
     console.log('\n🔍 Testing strict table mutation allowlist in getErpWriteDb()...');
     const writeDb = await getErpWriteDb();
     try {

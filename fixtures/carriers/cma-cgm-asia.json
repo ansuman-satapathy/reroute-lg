@@ -1,0 +1,14 @@
+{
+  "carrier_id": "cma-cgm-asia",
+  "carrier_name": "CMA CGM Asia Expedited",
+  "service_tier": "Ultra-Fast Air/Sea Hybrid Priority",
+  "available_teu_capacity": 25,
+  "transit_time_days": 6,
+  "rate_per_teu_usd": 4200.00,
+  "reliability_score": 0.92,
+  "cutoff_window_hours": 12,
+  "next_departure": "2026-08-30T12:00:00Z",
+  "routing_corridor": "Expedited Trans-Pacific Accelerated Express",
+  "vessel_status": "Ready for Immediate Loading",
+  "notes": "Emergency expedited sea-air combined freight service; highest spot rate surcharge with quickest turnaround."
+}

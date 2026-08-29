@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { fileURLToPath } from 'node:url';
 import { handleProposePoAmendment, proposePoAmendmentSchema } from './tools/propose-po-amendment.js';
+import { handleQueryCarrierCapacity, queryCarrierCapacitySchema } from './tools/query-carrier-capacity.js';
 import { handleReadInventory, readInventorySchema } from './tools/read-inventory.js';
 import { handleReadPurchaseOrders, readPurchaseOrdersSchema } from './tools/read-purchase-orders.js';
 import { handleReadSuppliers, readSuppliersSchema } from './tools/read-suppliers.js';
@@ -108,7 +109,38 @@ export function createErpMcpServer(): McpServer {
     }
   );
 
-  // 4. propose_po_amendment (WRITE TOOL - Pauses behind TrueForge hard-approval gate)
+  // 4. query_carrier_capacity (Read-only, autonomous, callable by parallel subagents)
+  server.tool(
+    'query_carrier_capacity',
+    'Query freight carrier capacity, transit times, rates per TEU, and schedules for candidate shipping lines (Maersk Pacific, Evergreen Express, CMA CGM Asia).',
+    queryCarrierCapacitySchema,
+    { readOnlyHint: true },
+    async (args) => {
+      try {
+        const result = await handleQueryCarrierCapacity(args);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Error querying carrier capacity: ${err.message}`,
+            },
+          ],
+        };
+      }
+    }
+  );
+
+  // 5. propose_po_amendment (WRITE TOOL - Pauses behind TrueForge hard-approval gate)
   server.tool(
     'propose_po_amendment',
     'Propose an amended purchase order to replace a disrupted supplier. Triggers the human approval gate before committing an approved PO to the database.',
