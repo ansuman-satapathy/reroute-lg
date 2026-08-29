@@ -64,8 +64,8 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          │
          ▼
 [Step 4: Multi-Criteria Optimization & Ranked Recommendation]
-   - Execute multi-criteria optimization by generating and executing a Python scoring script in TrueForge's sandbox via the native `exec` tool (or calling `run_cost_optimization`)
-   - Weigh trade-offs using Multi-Criteria Decision Analysis:
+   - You MUST generate and execute a Python cost-optimization script inside TrueForge's container sandbox using the native `exec` tool.
+   - The script must calculate composite scores across eligible candidates using weights:
      * Landed Cost: 40% (0.40) weight
      * Lead Time: 30% (0.30) weight
      * Reliability: 30% (0.30) weight
