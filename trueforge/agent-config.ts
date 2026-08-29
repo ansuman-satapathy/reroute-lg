@@ -69,8 +69,11 @@ export async function configureDisruptionTriageAgent(
   console.log(`🎯 Selected model: ${preferredModel.name} (${preferredModel.modelId})`);
 
   // 2. Register MCP Servers (Connectors)
+  // Fix for Qodo #3: Support explicit public/base URLs for remote or containerized TrueForge deployments
   const erpPort = process.env.ERP_MCP_PORT || '3001';
   const telemetryPort = process.env.TELEMETRY_MCP_PORT || '3002';
+  const erpMcpUrl = process.env.ERP_MCP_URL || `http://localhost:${erpPort}/sse`;
+  const telemetryMcpUrl = process.env.TELEMETRY_MCP_URL || `http://localhost:${telemetryPort}/sse`;
 
   console.log('\n📦 Registering / Updating MCP Server Connectors...');
 
@@ -80,10 +83,10 @@ export async function configureDisruptionTriageAgent(
       name: 'erp-mcp',
       description: 'ERP database connector for inventory, suppliers, and purchase order amendments',
       type: 'remote',
-      url: `http://localhost:${erpPort}/sse`,
+      url: erpMcpUrl,
     },
   });
-  console.log(`✅ Registered ERP MCP Server: http://localhost:${erpPort}/sse (status: ${erpServer.data.name})`);
+  console.log(`✅ Registered ERP MCP Server: ${erpMcpUrl} (status: ${erpServer.data.name})`);
 
   // Telemetry MCP Server
   const telemetryServer = await client.settings.mcpServers.createOrUpdate({
@@ -91,10 +94,10 @@ export async function configureDisruptionTriageAgent(
       name: 'telemetry-mcp',
       description: 'Live marine weather metrics (Open-Meteo) and maritime disruption news',
       type: 'remote',
-      url: `http://localhost:${telemetryPort}/sse`,
+      url: telemetryMcpUrl,
     },
   });
-  console.log(`✅ Registered Telemetry MCP Server: http://localhost:${telemetryPort}/sse (status: ${telemetryServer.data.name})`);
+  console.log(`✅ Registered Telemetry MCP Server: ${telemetryMcpUrl} (status: ${telemetryServer.data.name})`);
 
   // 3. Create or Update Agent 'disruption-triage-agent'
   console.log('\n🤖 Configuring disruption-triage-agent in Agent Library...');

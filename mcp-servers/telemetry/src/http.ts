@@ -11,24 +11,35 @@ interface ActiveSession {
   transport: SSEServerTransport;
 }
 
-export function startTelemetryHttpServer(port = 3002): http.Server {
+export function startTelemetryHttpServer(
+  port = 3002,
+  host = process.env.TELEMETRY_MCP_HOST || '127.0.0.1'
+): http.Server {
   const sessions = new Map<string, ActiveSession>();
 
   const httpServer = http.createServer(async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // Security: Restrict allowed origins
+    const origin = req.headers.origin;
+    const allowedOrigin =
+      process.env.ALLOWED_ORIGIN ||
+      (origin && (origin.includes('localhost') || origin.includes('127.0.0.1')) ? origin : '');
+
+    if (allowedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      res.setHeader('Vary', 'Origin');
+    }
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(200).end();
+      res.writeHead(204).end();
       return;
     }
 
-    const parsedUrl = new URL(req.url ?? '/', `http://${req.headers.host}`);
+    const parsedUrl = new URL(req.url ?? '/', `http://${req.headers.host || `${host}:${port}`}`);
 
     // SSE connection endpoint
     if (req.method === 'GET' && (parsedUrl.pathname === '/sse' || parsedUrl.pathname === '/')) {
-      // Create separate McpServer instance per SSE connection to satisfy SDK protocol isolation
       const server = createTelemetryMcpServer();
       const transport = new SSEServerTransport('/message', res);
       const sessionId = transport.sessionId;
@@ -47,15 +58,22 @@ export function startTelemetryHttpServer(port = 3002): http.Server {
 
     // Message POST endpoint for SSE sessions
     if (req.method === 'POST' && parsedUrl.pathname.startsWith('/message')) {
+      // Fix for Qodo #4: Strictly require sessionId; never fall back to an arbitrary active session
       const sessionId = parsedUrl.searchParams.get('sessionId');
-      const session = sessionId ? sessions.get(sessionId) : Array.from(sessions.values())[0];
-
-      if (session) {
-        await session.transport.handlePostMessage(req, res);
-      } else {
+      if (!sessionId) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Session not found or expired' }));
+        res.end(JSON.stringify({ error: 'Missing required sessionId parameter' }));
+        return;
       }
+
+      const session = sessions.get(sessionId);
+      if (!session) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: `Session '${sessionId}' not found or expired` }));
+        return;
+      }
+
+      await session.transport.handlePostMessage(req, res);
       return;
     }
 
@@ -78,8 +96,8 @@ export function startTelemetryHttpServer(port = 3002): http.Server {
     res.end(JSON.stringify({ error: 'Endpoint not found' }));
   });
 
-  httpServer.listen(port, () => {
-    console.log(`🚀 Telemetry MCP Server (HTTP/SSE) listening on http://localhost:${port}/sse`);
+  httpServer.listen(port, host, () => {
+    console.log(`🚀 Telemetry MCP Server (HTTP/SSE) listening on http://${host}:${port}/sse`);
   });
 
   return httpServer;
@@ -87,5 +105,6 @@ export function startTelemetryHttpServer(port = 3002): http.Server {
 
 if (process.argv[1] === __filename) {
   const port = Number(process.env.TELEMETRY_MCP_PORT) || 3002;
-  startTelemetryHttpServer(port);
+  const host = process.env.TELEMETRY_MCP_HOST || '127.0.0.1';
+  startTelemetryHttpServer(port, host);
 }
