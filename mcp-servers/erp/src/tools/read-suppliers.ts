@@ -15,14 +15,23 @@ export const readSuppliersSchema = {
     .string()
     .optional()
     .describe('Filter suppliers by item name substring (e.g. "Marine Bearings")'),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .default(50)
+    .describe('Maximum number of supplier quotes to return (default: 50)'),
 };
 
 export async function handleReadSuppliers(params: {
   sku?: string;
   region?: string;
   item_name?: string;
+  limit?: number;
 }) {
   const db = await getErpDb();
+  const limit = params.limit ?? 50;
 
   let query = `
     SELECT 
@@ -59,7 +68,8 @@ export async function handleReadSuppliers(params: {
     queryParams.push(`%${params.item_name.trim()}%`);
   }
 
-  query += ` ORDER BY sc.sku, sc.unit_cost ASC`;
+  query += ` ORDER BY sc.sku, sc.unit_cost ASC LIMIT ?`;
+  queryParams.push(limit);
 
   const rows = db.prepare(query).all(...queryParams) as any[];
 
@@ -78,6 +88,7 @@ export async function handleReadSuppliers(params: {
 
   return {
     total_found: suppliers.length,
+    limit_applied: limit,
     suppliers,
   };
 }
