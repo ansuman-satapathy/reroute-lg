@@ -69,7 +69,15 @@ export async function initDatabase() {
   const db = await getDatabase(dbPath);
 
   try {
-    console.log('📦 Applying schema...');
+    console.log('📦 Rebuilding schema tables in-place...');
+    db.exec(`
+      PRAGMA foreign_keys = OFF;
+      DROP TABLE IF EXISTS purchase_orders;
+      DROP TABLE IF EXISTS supplier_catalog;
+      DROP TABLE IF EXISTS inventory;
+      DROP TABLE IF EXISTS suppliers;
+      PRAGMA foreign_keys = ON;
+    `);
     db.exec(schemaSql);
 
     console.log('🌱 Applying intentional seed data in an atomic transaction...');
