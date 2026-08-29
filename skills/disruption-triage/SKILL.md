@@ -70,7 +70,7 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
      * Lead Time: 30% (0.30) weight
      * Reliability: 30% (0.30) weight
    - Output a human-readable ranked table (Rank, Supplier Name, Landed Cost, Lead Time, Reliability, Composite Score, Status)
-   - Ensure the balanced compliant supplier (IndoPacific) outranks cheap-but-slow alternatives that exceed stockout thresholds
+   - Ensure the highest-scoring compliant alternate supplier outside the disrupted corridor outranks cheap-but-slow alternatives that exceed stockout thresholds
          │
          ▼
 [Step 5: Human Approval Gate & PO Amendment]
