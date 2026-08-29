@@ -90,9 +90,25 @@ async function runAgentWiringTests() {
   const messageEvents = events.data.filter(
     (e: any) => e.type === 'model.message' && typeof e.content === 'string'
   );
+
+  // Fix for Qodo #5: Explicitly fail unless at least one model message with non-empty string content was received
+  if (messageEvents.length === 0) {
+    throw new Error(
+      `❌ Turn completed without any model.message events! Received events: ${JSON.stringify(events.data)}`
+    );
+  }
+
   const agentMessage = messageEvents[messageEvents.length - 1] as any;
+  const messageContent = (agentMessage?.content as string)?.trim();
+
+  if (!messageContent) {
+    throw new Error(
+      `❌ Model returned empty response content! AgentMessage: ${JSON.stringify(agentMessage)}`
+    );
+  }
+
   console.log(`✅ Criteria Passed: Model responded successfully:`);
-  console.log(`   Response: "${(agentMessage?.content as string)?.slice(0, 140)}..."`);
+  console.log(`   Response: "${messageContent.slice(0, 140)}..."`);
 
   // 5. Test Session Persistence
   console.log('\n🔍 Verifying Session Persistence in TrueForge...');
