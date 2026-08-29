@@ -59,13 +59,28 @@ async function runInjectAlertTests() {
   }
   console.log(`✅ Criteria 2 Passed: Alert posted to active agent session (${result.sessionId})`);
 
-  if (!result.autoTriggeredEvaluation) {
-    throw new Error('❌ Agent failed to auto-trigger disruption evaluation upon high-severity alert ingestion');
+  // Fix for Qodo #2: Require confirmed execution of BOTH read_inventory and read_suppliers
+  const hasInventory = result.toolsCalled.includes('read_inventory');
+  const hasSuppliers = result.toolsCalled.includes('read_suppliers');
+
+  if (!hasInventory || !hasSuppliers) {
+    throw new Error(
+      `❌ Agent failed required autonomous checks. Expected both 'read_inventory' and 'read_suppliers'. Executed tools: [${result.toolsCalled.join(', ')}]`
+    );
   }
 
-  console.log(`✅ Criteria 3 Passed: Agent auto-triggered evaluation upon alert ingestion:`);
-  console.log(`   - Tools Executed: [${result.toolsCalled.join(', ')}]`);
-  console.log(`   - Agent Output Length: ${result.agentResponse.length} chars`);
+  // Fix for Qodo #4: Explicitly assert non-empty response content
+  if (!result.agentResponse || !result.agentResponse.trim()) {
+    throw new Error(
+      '❌ Agent completed turn without producing any non-empty triage assessment or recommendation response!'
+    );
+  }
+
+  console.log(`✅ Criteria 3 Passed: Agent autonomously executed both inventory and supplier evaluations with non-empty response:`);
+  console.log(`   - Inventory Checked: ${hasInventory}`);
+  console.log(`   - Suppliers Checked: ${hasSuppliers}`);
+  console.log(`   - Total Tools Executed: [${result.toolsCalled.join(', ')}]`);
+  console.log(`   - Agent Response Length: ${result.agentResponse.trim().length} chars`);
 
   console.log('\n🎉 ALL Ticket #06 acceptance tests PASSED successfully!');
 }
