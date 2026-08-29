@@ -38,7 +38,7 @@ Execute your standard disruption triage protocol immediately:
 1. First, corroborate the incoming disruption signal via live telemetry.
 2. Inspect inventory buffer vulnerability for affected parts using read_inventory.
 3. Identify the primary supplier and discover qualified alternate suppliers using read_suppliers.
-4. Run multi-criteria cost optimization.
+4. Run multi-criteria cost optimization in TrueForge's sandbox via exec.
 5. Render a Generative UI PO Diff table in chat and invoke propose_po_amendment for the top-ranked compliant alternate.`;
 
   const timings: StepTiming[] = [];
