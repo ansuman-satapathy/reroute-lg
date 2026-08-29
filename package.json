@@ -7,13 +7,20 @@
   "engines": {
     "node": ">=22.13.0"
   },
+  "workspaces": [
+    "mcp-servers/*"
+  ],
   "scripts": {
     "db:init": "tsx db/init-db.ts",
     "db:verify": "tsx db/verify-db.ts",
+    "dev:erp": "tsx mcp-servers/erp/src/index.ts",
+    "test:erp": "tsx mcp-servers/erp/test-tools.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "dotenv": "^16.4.7"
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
