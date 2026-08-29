@@ -10,6 +10,8 @@ const __dirname = path.dirname(__filename);
 export const TRUEFORGE_BASE_URL =
   process.env.TRUEFORGE_URL || process.env.TRUEFORGE_BASE_URL || 'http://localhost:8790';
 
+import { extractToolName } from './inject-alert.js';
+
 interface StepTiming {
   name: string;
   timestampMs: number;
@@ -73,9 +75,11 @@ Execute your standard disruption triage protocol immediately:
 
   const observedTools = new Set<string>();
   let reachedGate = false;
-  let isDone = false;
+  let lastTurnState: any = null;
+  const maxPollAttempts = 60;
+  let completedInPoll = false;
 
-  for (let poll = 0; poll < 60; poll++) {
+  for (let poll = 0; poll < maxPollAttempts; poll++) {
     await new Promise((r) => setTimeout(r, 2000));
 
     const events = await client.sessions.listTurnEvents(sessionId, turnId);
@@ -83,8 +87,8 @@ Execute your standard disruption triage protocol immediately:
       const anyEv = ev as any;
       const calls = anyEv.tool_calls || anyEv.toolCalls || [];
       for (const call of calls) {
-        const toolName =
-          call.tool_info?.name || call.toolInfo?.name || call.function?.name || call.name;
+        // Fix for Qodo #6: Use canonical extractToolName including wrapper unwrapping
+        const toolName = extractToolName(call);
         if (toolName && !observedTools.has(toolName)) {
           observedTools.add(toolName);
           recordStep(`Tool Invoked: ${toolName}`);
@@ -98,6 +102,7 @@ Execute your standard disruption triage protocol immediately:
     }
 
     const t = await client.sessions.getTurn(sessionId, turnId);
+    lastTurnState = t.data.state;
     const pending = (t.data.state as any)?.pendingActions || [];
     const required = (t.data.state as any)?.requiredActions || [];
     const approvalAction =
@@ -109,13 +114,37 @@ Execute your standard disruption triage protocol immediately:
       recordStep('Human Approval Gate Triggered (state.requiredActions)');
     }
 
-    if (reachedGate || t.data.state.status !== 'running') {
-      isDone = true;
+    if (reachedGate) {
+      completedInPoll = true;
+      break;
+    }
+
+    // Fix for Qodo #3: Explicitly fail on error or cancellation
+    if (t.data.state.status === 'error') {
+      throw new Error(`❌ Turn failed with error state: ${JSON.stringify(t.data.state)}`);
+    }
+    if (t.data.state.status === 'cancelled') {
+      throw new Error(`❌ Turn was cancelled prematurely before reaching approval gate.`);
+    }
+
+    if (t.data.state.status !== 'running') {
+      completedInPoll = true;
       break;
     }
   }
 
-  recordStep('Pipeline Paused / Finalized');
+  if (!completedInPoll && !reachedGate) {
+    throw new Error(`❌ Benchmark timed out after ${maxPollAttempts * 2}s polling without reaching approval gate.`);
+  }
+
+  // Fix for Qodo #3: Fail benchmark if turn completed without triggering approval gate
+  if (!reachedGate) {
+    throw new Error(
+      `❌ Benchmark failed: Turn finished with status '${lastTurnState?.status}' without triggering the human approval gate (propose_po_amendment)!`
+    );
+  }
+
+  recordStep('Human Approval Gate Verified & Paused');
 
   console.log('\n================================================================================');
   console.log('📊 END-TO-END DEMO TIMING BENCHMARK REPORT');

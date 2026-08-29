@@ -23,7 +23,7 @@ export interface InjectedAlertResult {
  * Extracts inner tool name from a tool call item, supporting both snake_case
  * and camelCase fields, plus unwrapping generic call_tool wrappers (Fix for Qodo #1)
  */
-function extractToolName(call: any): string | null {
+export function extractToolName(call: any): string | null {
   if (!call) return null;
 
   // 1. Direct tool metadata from TrueForge turn event schema
@@ -94,17 +94,32 @@ export async function injectDisruptionAlert(
     console.log(`🔄 Attaching to existing session: ${sessionId}`);
   }
 
-  // 4. Construct webhook alert message with explicit triage instructions
-  const alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
-A HIGH-SEVERITY disruption alert has just been received for your monitored corridor:
+  // 4. Construct webhook alert message with dynamic severity-specific instructions (Fix for Qodo #1)
+  const isHighSeverity = String(alert.severity || '').toLowerCase() === 'high';
+  const severityUpper = String(alert.severity || 'UNKNOWN').toUpperCase();
+
+  let alertPrompt: string;
+  if (isHighSeverity) {
+    alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
+A ${severityUpper}-SEVERITY disruption alert has just been received for region "${alert.region}":
 
 ${JSON.stringify(alert, null, 2)}
 
 INSTRUCTIONS:
-Execute your standard disruption triage protocol immediately:
-1. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
-2. Identify the primary supplier and discover qualified alternate suppliers using read_suppliers.
-3. Provide a clear written evaluation in your response summarizing affected stock, burn rate, and viable alternate suppliers.`;
+Execute your standard disruption triage protocol immediately per your SOP:
+1. Corroborate alert signals with live telemetry tools (Step 0).
+2. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
+3. Identify the primary supplier and discover qualified alternate suppliers using read_suppliers.
+4. Run cost optimization, formulate re-routing recommendations, present Generative UI PO Diff, and pause for operator approval.`;
+  } else {
+    alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
+A ${severityUpper}-SEVERITY advisory has just been received for region "${alert.region}":
+
+${JSON.stringify(alert, null, 2)}
+
+INSTRUCTIONS:
+Evaluate this incoming advisory per your disruption-triage SOP trigger rules. Note whether this advisory meets the severity threshold (HIGH only) and corridor exposure rules for active triage. If it is low-severity, routine maintenance, or outside monitored supplier regions, record an informational assessment and conclude that no PO amendments are warranted.`;
+  }
 
   // 5. Post alert turn
   console.log(`\n📨 Injecting alert payload as turn to agent...`);
@@ -118,6 +133,7 @@ Execute your standard disruption triage protocol immediately:
   });
 
   let turnId = turn.data.id;
+  const executedTurnIds: string[] = [turnId];
   console.log(`   - Turn dispatched (${turnId}). Monitoring autonomous agent execution...`);
 
   // 6. Poll until turn finishes (allows sufficient time for multi-step agent reasoning & tool execution)
@@ -151,6 +167,7 @@ Execute your standard disruption triage protocol immediately:
       ],
     });
     turnId = retryTurn.data.id;
+    executedTurnIds.push(turnId);
     console.log(`   - Continuation turn dispatched (${turnId}). Polling until complete...`);
 
     for (let i = 0; i < maxPollAttempts; i++) {
@@ -173,12 +190,16 @@ Execute your standard disruption triage protocol immediately:
     );
   }
 
-  // 7. Extract events and evaluate autonomous tool execution
-  const events = await client.sessions.listTurnEvents(sessionId, turnId);
+  // 7. Extract events and evaluate autonomous tool execution across all attempted turns (Fix for Qodo #4)
+  const events: any[] = [];
+  for (const tid of executedTurnIds) {
+    const turnEvents = await client.sessions.listTurnEvents(sessionId, tid);
+    events.push(...(turnEvents.data || []));
+  }
   const toolsCalled: string[] = [];
   const responseParts: string[] = [];
 
-  for (const ev of events.data || []) {
+  for (const ev of events) {
     const anyEv = ev as any;
 
     // Fix for Qodo #1: Check both tool_calls (snake_case) and toolCalls (camelCase)
@@ -218,7 +239,7 @@ Execute your standard disruption triage protocol immediately:
   // If responseParts is empty because the model concluded with a gated tool call,
   // extract the amendment evaluation from the propose_po_amendment tool arguments
   if (responseParts.length === 0) {
-    for (const ev of events.data || []) {
+    for (const ev of events) {
       const anyEv = ev as any;
       const calls = anyEv.tool_calls || anyEv.toolCalls;
       if (Array.isArray(calls)) {

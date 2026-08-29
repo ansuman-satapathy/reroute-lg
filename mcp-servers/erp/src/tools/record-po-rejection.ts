@@ -67,14 +67,16 @@ export async function handleRecordPoRejection(params: {
   const totalCost = Number((unitCost * params.quantity).toFixed(2));
   const auditNotes = `REJECTED BY OPERATOR: ${params.reason.trim()}`;
 
+  const canonicalSku = params.sku.trim();
   const insertSql = `
-    INSERT INTO purchase_orders (item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes)
-    VALUES (?, ?, ?, ?, ?, 'rejected', CURRENT_TIMESTAMP, ?)
+    INSERT INTO purchase_orders (sku, item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes)
+    VALUES (?, ?, ?, ?, ?, ?, 'rejected', CURRENT_TIMESTAMP, ?)
   `;
 
   const result = db
     .prepare(insertSql)
     .run(
+      canonicalSku,
       resolvedItemName,
       params.supplier_id,
       params.quantity,

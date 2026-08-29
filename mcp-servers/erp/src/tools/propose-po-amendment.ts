@@ -114,17 +114,18 @@ export async function handleProposePoAmendment(params: {
     params.notes ??
     `Autonomous PO amendment approved via TrueForge gate. Replaced primary supplier due to regional disruption.`;
 
-  // Idempotency: detect duplicate PO within last 24 hours for same SKU + supplier
+  // Idempotency: detect duplicate PO within last 24 hours for same canonical SKU + supplier
+  const canonicalSku = params.sku.trim();
   const recentPo = db
     .prepare(
-      `SELECT id, item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes
+      `SELECT id, sku, item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes
        FROM purchase_orders
-       WHERE supplier_id = ? AND (notes LIKE ? OR item_name = ?)
+       WHERE supplier_id = ? AND sku = ?
          AND created_at >= datetime('now', '-24 hours')
          AND status IN ('approved', 'pending')
        ORDER BY id DESC LIMIT 1`
     )
-    .get(params.supplier_id, `%${params.sku}%`, resolvedItemName) as any;
+    .get(params.supplier_id, canonicalSku) as any;
 
   if (recentPo) {
     return {
@@ -132,7 +133,7 @@ export async function handleProposePoAmendment(params: {
       po_id: Number(recentPo.id),
       status: recentPo.status,
       duplicate: true,
-      sku: params.sku,
+      sku: recentPo.sku || canonicalSku,
       item_name: recentPo.item_name,
       supplier_id: recentPo.supplier_id,
       supplier_name: catalogQuote.supplier_name,
@@ -141,19 +142,20 @@ export async function handleProposePoAmendment(params: {
       unit_cost: recentPo.unit_cost,
       total_cost: recentPo.total_cost,
       notes: recentPo.notes,
-      message: `Idempotency: Purchase Order #${recentPo.id} already exists for SKU "${params.sku}" with supplier ${params.supplier_id} (created within last 24h). Existing order preserved without duplication.`,
+      message: `Idempotency: Purchase Order #${recentPo.id} already exists for SKU "${canonicalSku}" with supplier ${params.supplier_id} (created within last 24h). Existing order preserved without duplication.`,
     };
   }
 
   // 3. Insert approved purchase order (gated by TrueForge; only executes on user Allow)
   const insertSql = `
-    INSERT INTO purchase_orders (item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes)
-    VALUES (?, ?, ?, ?, ?, 'approved', CURRENT_TIMESTAMP, ?)
+    INSERT INTO purchase_orders (sku, item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes)
+    VALUES (?, ?, ?, ?, ?, ?, 'approved', CURRENT_TIMESTAMP, ?)
   `;
 
   const result = db
     .prepare(insertSql)
     .run(
+      canonicalSku,
       resolvedItemName,
       params.supplier_id,
       params.quantity,

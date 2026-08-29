@@ -85,7 +85,7 @@ INSERT INTO supplier_catalog (supplier_id, sku, item_name, unit_cost, lead_time_
 -- 4. Initial Baseline Purchase Orders
 -- ---------------------------------------------------
 -- Historic baseline orders for realism; none in pending status
-INSERT INTO purchase_orders (id, item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes) VALUES
-(101, 'High-Pressure Hydraulic Seal Kit', 5, 100, 115.00, 11500.00, 'approved', '2026-08-01 10:00:00', 'Quarterly scheduled restock'),
-(102, 'Common Rail Diesel Injectors (Tier III)', 6, 20, 480.00, 9600.00, 'approved', '2026-08-10 14:30:00', 'Engine overhaul maintenance kit'),
-(103, 'Marine Bearings, SKU-4471', 1, 200, 42.50, 8500.00, 'approved', '2026-07-15 09:15:00', 'Previous fulfilled PO with Oceanic Bearings Ltd');
+INSERT INTO purchase_orders (id, sku, item_name, supplier_id, quantity, unit_cost, total_cost, status, created_at, notes) VALUES
+(101, 'SKU-1012', 'High-Pressure Hydraulic Seal Kit', 5, 100, 115.00, 11500.00, 'approved', '2026-08-01 10:00:00', 'Quarterly scheduled restock'),
+(102, 'SKU-2045', 'Common Rail Diesel Injectors (Tier III)', 6, 20, 480.00, 9600.00, 'approved', '2026-08-10 14:30:00', 'Engine overhaul maintenance kit'),
+(103, 'SKU-4471', 'Marine Bearings, SKU-4471', 1, 200, 42.50, 8500.00, 'approved', '2026-07-15 09:15:00', 'Previous fulfilled PO with Oceanic Bearings Ltd');
