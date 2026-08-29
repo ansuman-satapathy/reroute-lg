@@ -1,0 +1,20 @@
+{
+  "event_id": "EVT-2026-ECS-0829",
+  "type": "weather_disruption",
+  "severity": "high",
+  "region": "East China Sea",
+  "coordinates": {
+    "latitude": 30.6,
+    "longitude": 126.0
+  },
+  "title": "Category 4 Super Typhoon Impact - Terminal Stoppages and Maritime Corridor Halt",
+  "summary": "Severe Category 4 Typhoon approaching the East China Sea shipping corridor with sustained winds of 155 km/h and wind gusts exceeding 200 km/h. Key container terminals and industrial cargo ports in the Zhoushan and Ningbo basins have suspended all operations. Ocean transit through the East China Sea is closed until further notice, causing indefinite shipment delays for all regional manufacturing and marine suppliers.",
+  "impacted_corridors": [
+    "East China Sea Shipping Lanes",
+    "Ningbo-Zhoushan Port Complex",
+    "Shanghai Marine Outpost"
+  ],
+  "source": "Global Maritime Weather Alert Service",
+  "timestamp": "2026-08-29T08:00:00.000Z",
+  "confidence": 0.98
+}
