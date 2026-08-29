@@ -20,6 +20,8 @@
     "start:mcp": "tsx scripts/start-mcp-servers.ts",
     "config:agent": "tsx trueforge/agent-config.ts",
     "test:agent": "tsx trueforge/test-agent.ts",
+    "inject-alert": "tsx scripts/inject-alert.ts",
+    "test:inject-alert": "tsx test/test-inject-alert.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
