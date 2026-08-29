@@ -224,3 +224,14 @@ export async function getErpWriteDb(): Promise<WriteDatabaseConnection> {
 
   return writeDbInitPromise;
 }
+
+export async function closeErpDbs(): Promise<void> {
+  if (writeDbInstance) {
+    writeDbInstance.close();
+    writeDbInstance = null;
+  }
+  if (readDbInstance) {
+    readDbInstance.close();
+    readDbInstance = null;
+  }
+}

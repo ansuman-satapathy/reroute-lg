@@ -97,16 +97,21 @@ The agent must strictly enforce these quantitative boundaries when evaluating al
 Before invoking `propose_po_amendment`, the agent MUST render a visual Generative UI Diff (table/card) comparing the baseline PO against the proposed amendment:
 
 ### Generative UI PO Diff Specification:
-- **Supplier Name**: Current (Oceanic Bearings Ltd) vs Proposed Alternate (e.g. IndoPacific Parts Corp)
-- **Origin Region & Route**: Compromised East China Sea corridor vs Safe alternate corridor
-- **Unit Cost**: Current unit price vs Alternate unit price and dollar delta / percentage variance
-- **Lead Time**: Current lead time vs Alternate lead time (must arrive before stockout window)
-- **Reliability Score**: Current reliability vs Alternate reliability (must be ≥ 0.75)
-- **Total PO Value**: Baseline order cost vs Proposed order cost and budget impact
-- **Guardrail Compliance**: Summary verifying +50% cost ceiling, reliability floor, and stockout buffer
+The agent MUST output a visible comparison table directly in the chat response text before proposing an amendment:
+
+| Metric | Baseline (Oceanic Bearings Ltd) | Proposed Alternate (IndoPacific Parts Corp) | Variance / Delta |
+|:---|:---|:---|:---|
+| **Supplier Name** | Oceanic Bearings Ltd (ID: 1) | IndoPacific Parts Corp (ID: 4) | Re-routed supplier |
+| **Origin Corridor** | East China Sea (Disrupted) | Southeast Asia (Safe corridor) | Typhoon bypassed |
+| **Unit Cost** | $42.50 | $47.50 | +$5.00 (+11.8%) |
+| **Lead Time** | 14 days | 12 days | -2 days (-14.3%) |
+| **Reliability** | 0.94 | 0.89 | -0.05 (-5.3%) |
+| **Order Quantity** | 200 units | 200 units | 0 units |
+| **Total PO Value** | $8,500.00 | $9,500.00 | +$1,000.00 (+11.8%) |
+| **Guardrails** | Baseline PO | Compliant (≤+50% cost, ≥0.75 rel, < DoS) | Verified |
 
 ### Human Approval Gate Execution:
-1. **Render the Diff in Chat**: Output the before/after Generative UI Diff comparison table directly in your chat response text to the operator. Do not hide it solely in a sandbox script file.
+1. **Render the Diff in Chat**: Output the before/after Generative UI Diff comparison table directly in your chat response text to the operator. Do not hide it solely in a sandbox script file or omit numeric columns.
 2. **Trigger Gate**: Invoke `propose_po_amendment` with the structured parameters. TrueForge will pause execution with `tool.approval_required`.
 3. **Approve Path (Allow)**:
    - When the operator grants approval, the tool executes and commits an `approved` row to `purchase_orders`.
