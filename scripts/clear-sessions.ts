@@ -6,21 +6,24 @@ async function clearAllSessions() {
   console.log(`🧹 Connecting to TrueForge at: ${TRUEFORGE_BASE_URL}...`);
   const client = new TrueForge({ baseUrl: TRUEFORGE_BASE_URL });
 
-  const res = await client.sessions.list();
-  const sessions = res.data || [];
+  let totalDeleted = 0;
+  while (true) {
+    const res = await client.sessions.list();
+    const sessions = res.data || [];
+    if (sessions.length === 0) break;
 
-  if (sessions.length === 0) {
+    console.log(`🗑️ Deleting batch of ${sessions.length} chat session(s)...`);
+    for (const s of sessions) {
+      await client.sessions.delete(s.id);
+      totalDeleted++;
+    }
+  }
+
+  if (totalDeleted === 0) {
     console.log('✨ No chat sessions found. Workspace is already completely clean!');
-    return;
+  } else {
+    console.log(`🎉 All ${totalDeleted} TrueForge chat session(s) successfully deleted!`);
   }
-
-  console.log(`🗑️ Deleting ${sessions.length} chat session(s)...`);
-  for (const s of sessions) {
-    await client.sessions.delete(s.id);
-    console.log(`   - Deleted session: ${s.id}`);
-  }
-
-  console.log('🎉 All TrueForge chat history has been successfully cleared!');
 }
 
 clearAllSessions().catch((err) => {
