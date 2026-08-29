@@ -1,0 +1,21 @@
+{
+  "name": "logistics-disruption-triage",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Autonomous Supply-Chain Disruption Triage Agent powered by TrueForge",
+  "type": "module",
+  "scripts": {
+    "db:init": "tsx db/init-db.ts",
+    "db:verify": "tsx db/verify-db.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}
