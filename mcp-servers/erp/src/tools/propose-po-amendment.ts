@@ -99,11 +99,11 @@ export async function handleProposePoAmendment(params: {
     );
   }
 
-  // Guardrail 4: Arrival Before Projected Stockout Date
+  // Guardrail 4: Arrival Before Projected Stockout Date (FR-15: lead_time_days < daysOfSupply)
   const daysOfSupply = Math.floor(inventoryItem.current_stock / (inventoryItem.daily_burn_rate || 1));
-  if (catalogQuote.lead_time_days > daysOfSupply) {
+  if (catalogQuote.lead_time_days >= daysOfSupply) {
     throw new Error(
-      `Guardrail Violation: Alternate supplier lead time (${catalogQuote.lead_time_days} days) exceeds available Days of Supply (${daysOfSupply} days at ${inventoryItem.daily_burn_rate} units/day). Stockout would occur before delivery!`
+      `Guardrail Violation: Alternate supplier lead time (${catalogQuote.lead_time_days} days) exceeds available Days of Supply (${daysOfSupply} days at ${inventoryItem.daily_burn_rate} units/day). Alternate delivery must arrive strictly before stockout day!`
     );
   }
 

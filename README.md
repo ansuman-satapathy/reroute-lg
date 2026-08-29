@@ -326,6 +326,9 @@ npm run test:approval
 
 # 6. Verify latency benchmark to approval gate
 npm run demo:time
+
+# 7. Verify 24h PO idempotency guard & strict stockout boundary
+npm run test:idempotency
 ```
 
 ---

@@ -30,6 +30,7 @@
     "test:subagents": "tsx test/test-subagents.ts",
     "test:optimization": "tsx test/test-cost-optimization.ts",
     "test:approval": "tsx test/test-approval-gate.ts",
+    "test:idempotency": "tsx test/test-idempotency.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

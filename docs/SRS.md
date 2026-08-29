@@ -86,8 +86,8 @@ The matrix below maps each requirement to its corresponding ticket, implementati
 | **`FR-3`** | Stateful Session & Turns | #05, #10 | #5, #10 | `trueforge/agent-config.ts`, `test/test-approval-gate.ts` | `npm run test:approval` | Verified |
 | **`FR-4`** | Modular MCP Connectors | #01, #05 | #1, #5 | `scripts/start-mcp-servers.ts`, `trueforge/agent-config.ts` | `npm run start:mcp` | Verified |
 | **`FR-5`** | SOP Skill Attachment | #01, #05, #07 | #1, #5, #7 | `skills/disruption-triage/SKILL.md` | `npm run test:skill` | Verified |
-| **`FR-6`** | Live Marine Weather API | #04 | #4 | `mcp-servers/telemetry/src/tools/get-weather-alerts.ts` | `npm run test:telemetry` | Verified |
-| **`FR-7`** | Live News & Strike RSS | #04 | #4 | `mcp-servers/telemetry/src/tools/get-news-disruptions.ts` | `npm run test:telemetry` | Verified |
+| **`FR-6`** | Live Marine Weather API | #04 | #4 | `mcp-servers/telemetry/src/tools/weather.ts` | `npm run test:telemetry` | Verified |
+| **`FR-7`** | Live News & Strike RSS | #04 | #4 | `mcp-servers/telemetry/src/tools/news.ts` | `npm run test:telemetry` | Verified |
 | **`FR-8`** | Telemetry Normalization | #04 | #4 | `mcp-servers/telemetry/src/types.ts` | `npm run test:telemetry` | Verified |
 | **`FR-9`** | Inventory Buffer & DoS | #02, #06 | #2, #6 | `mcp-servers/erp/src/tools/read-inventory.ts` | `npm run test:erp`, `npm run test:inject-alert` | Verified |
 | **`FR-10`** | Alternate Supplier Lookup | #02, #06 | #2, #6 | `mcp-servers/erp/src/tools/read-suppliers.ts` | `npm run test:erp`, `npm run test:inject-alert` | Verified |
@@ -108,5 +108,5 @@ The matrix below maps each requirement to its corresponding ticket, implementati
 | **`NFR-1`** | Secret Management | #01 | #1 | `.gitignore`, `.env.example` | `git log -p` audit | Verified |
 | **`NFR-2`** | Sub-90s Triage Latency | #11 | #11 | `scripts/demo-time.ts` | `npm run demo:time` (32s–60s) | Verified |
 | **`NFR-3`** | Deterministic Tool Calling | #05, #11 | #5, #11 | `trueforge/agent-config.ts` (`temp: 0.6`) | `npm run test:agent` | Verified |
-| **`NFR-4`** | 24h PO Idempotency Guard | #11 | #11 | `mcp-servers/erp/src/tools/propose-po-amendment.ts` | Isolated unit invocation | Verified |
+| **`NFR-4`** | 24h PO Idempotency Guard | #11, #12 | #11, #12 | `mcp-servers/erp/src/tools/propose-po-amendment.ts`, `test/test-idempotency.ts` | `npm run test:idempotency` | Verified |
 | **`NFR-5`** | Typed Audit Trail Replay | #10 | #10 | `test/test-approval-gate.ts` | `npm run test:approval` | Verified |
