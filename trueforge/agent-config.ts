@@ -120,7 +120,14 @@ export async function configureDisruptionTriageAgent(
     mcpServers: [
       {
         name: 'erp-mcp',
-        enableTools: ['@all'],
+        enableTools: [
+          'read_inventory',
+          'read_suppliers',
+          'read_purchase_orders',
+          'query_carrier_capacity',
+          'propose_po_amendment',
+          'record_po_rejection',
+        ],
         requireApprovalForTools: ['propose_po_amendment'],
         preload: true,
       },
