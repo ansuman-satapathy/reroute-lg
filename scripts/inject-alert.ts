@@ -65,10 +65,16 @@ export async function injectDisruptionAlert(
   console.log(`   - Region: ${alert.region}`);
   console.log(`   - Source: ${alert.source}`);
 
-  if (alert.severity !== 'high' || alert.region !== 'East China Sea') {
-    throw new Error(
-      `❌ Ingestion validation failed: Alert must have severity="high" and region="East China Sea".`
-    );
+  if (path.basename(fixturePath) === 'disruption-alert.json') {
+    if (alert.severity !== 'high' || alert.region !== 'East China Sea') {
+      throw new Error(
+        `❌ Ingestion validation failed: Alert must have severity="high" and region="East China Sea".`
+      );
+    }
+  } else {
+    if (!alert.severity || !alert.region || !alert.event_id) {
+      throw new Error(`❌ Ingestion validation failed: Custom alert must have event_id, severity, and region.`);
+    }
   }
 
   // 2. Connect to TrueForge
@@ -180,6 +186,30 @@ Execute your standard disruption triage protocol immediately:
     }
   }
 
+  // If responseParts is empty because the model concluded with a gated tool call,
+  // extract the amendment evaluation from the propose_po_amendment tool arguments
+  if (responseParts.length === 0) {
+    for (const ev of events) {
+      const anyEv = ev as any;
+      const calls = anyEv.tool_calls || anyEv.toolCalls;
+      if (Array.isArray(calls)) {
+        for (const call of calls) {
+          if (extractToolName(call) === 'propose_po_amendment') {
+            try {
+              const rawArgs = call.function?.arguments || call.arguments;
+              const parsed = typeof rawArgs === 'string' ? JSON.parse(rawArgs) : rawArgs;
+              if (parsed.notes) {
+                responseParts.push(`[AUTONOMOUS PO AMENDMENT PROPOSAL]: ${parsed.notes}`);
+              } else {
+                responseParts.push(`[AUTONOMOUS PO AMENDMENT PROPOSAL]: SKU ${parsed.sku}, Supplier ${parsed.supplier_id}, Quantity ${parsed.quantity}`);
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+  }
+
   const agentResponse = responseParts.join('\n\n');
 
   console.log(`\n📊 Summary of Autonomous Actions:`);
@@ -209,7 +239,13 @@ Execute your standard disruption triage protocol immediately:
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  injectDisruptionAlert()
+  const fixtureArgIdx = process.argv.indexOf('--fixture');
+  const targetFixture =
+    fixtureArgIdx !== -1 && process.argv[fixtureArgIdx + 1]
+      ? path.resolve(process.cwd(), process.argv[fixtureArgIdx + 1])
+      : undefined;
+
+  injectDisruptionAlert(targetFixture)
     .then((res) => {
       console.log('\n✅ Disruption alert injection completed successfully.');
       if (res.autoTriggeredEvaluation) {
