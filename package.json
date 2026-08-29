@@ -19,6 +19,7 @@
     "dev:telemetry": "tsx mcp-servers/telemetry/src/index.ts",
     "test:telemetry": "tsx mcp-servers/telemetry/test-tools.ts",
     "start:mcp": "tsx scripts/start-mcp-servers.ts",
+    "sessions:clear": "tsx scripts/clear-sessions.ts",
     "config:agent": "tsx trueforge/agent-config.ts",
     "test:agent": "tsx trueforge/test-agent.ts",
     "inject-alert": "tsx scripts/inject-alert.ts",
