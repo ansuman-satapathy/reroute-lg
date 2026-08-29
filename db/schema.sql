@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS supplier_catalog (
     lead_time_days INTEGER NOT NULL CHECK(lead_time_days > 0),
     reliability_score REAL NOT NULL CHECK(reliability_score >= 0.0 AND reliability_score <= 1.0),
     FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
-    FOREIGN KEY (sku) REFERENCES inventory(sku)
+    FOREIGN KEY (sku) REFERENCES inventory(sku),
+    UNIQUE(supplier_id, sku)
 );
 
 CREATE INDEX IF NOT EXISTS idx_catalog_sku ON supplier_catalog(sku);
