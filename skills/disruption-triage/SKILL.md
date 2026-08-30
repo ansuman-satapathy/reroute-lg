@@ -55,7 +55,7 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
      * Spawn parallel subagents — one per carrier (`maersk-pacific`, `evergreen-express`, `cma-cgm-asia`)
      * Each subagent calls `query_carrier_capacity` independently and returns a concise summary (transit days, rate/TEU, capacity, reliability)
      * Intermediate subagent tool executions remain isolated in their own subagent threads, returning only condensed findings to the root context
-     * **Carrier Purpose**: Supplier quotes (`unit_cost`, `lead_time_days`) represent door-to-door fulfillment. Carrier queries provide logistical feasibility validation—verifying that alternate routes have active sailings and unconstrained space (TEU capacity > 0) to bypass congested strike ports.
+     * **Carrier Data Role**: Supplier quotes (`unit_cost`, `lead_time_days`) represent door-to-door fulfillment. Carrier queries provide logistical feasibility validation—verifying that alternate corridors have active sailings and unconstrained space (TEU capacity > 0) to bypass congested ports. Do NOT add carrier transit days to supplier lead times or blend freight rates into unit cost.
          │
          ▼
 [Step 3: Guardrail & Cost-Band Filtering]
@@ -66,6 +66,7 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          ▼
 [Step 4: Multi-Criteria Optimization & Ranked Recommendation]
    - You MUST generate and execute a Python cost-optimization script inside TrueForge's container sandbox using the native `exec` tool.
+   - **Target Population**: Evaluate and rank all **eligible alternate suppliers** (those passing Step 3 guardrails). Do not include the disrupted primary supplier in the candidate optimization pool.
    - Use standard Min-Max normalization across eligible candidates to scale each metric to [0, 1]:
      * Cost Score: `(max_cost - cost) / (max_cost - min_cost)` (lower cost yields higher score)
      * Lead Time Score: `(max_lead - lead) / (max_lead - min_lead)` (shorter lead time yields higher score)
@@ -78,7 +79,8 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          │
          ▼
 [Step 5: Human Approval Gate & PO Amendment]
-   - Call `propose_po_amendment` with selected alternate supplier
+   - Format a 4-column Generative UI PO Diff table comparing the **disrupted baseline primary supplier** against the **#1 ranked alternate supplier**.
+   - Call `propose_po_amendment` with the #1 ranked alternate supplier
    - TrueForge will pause execution with `tool.approval_required`
    - Operator Allow ➔ Row committed as 'approved'
    - Operator Deny ➔ Call `record_po_rejection` with operator reason
