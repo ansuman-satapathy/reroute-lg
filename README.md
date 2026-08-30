@@ -165,7 +165,7 @@ npm run inject-alert
 
 | Scenario | Command | Fixture Path | Expected Agent Behavior |
 |:---|:---|:---|:---|
-| **Category 4 Typhoon** *(Primary Demo - Sandbox & Gate)* | `npm run inject-alert` | `fixtures/disruption-alert.json` | Corroborates Open-Meteo telemetry, computes 14d DoS, runs Python MCDA in TrueForge container sandbox via `exec`, renders Generative UI PO Diff, pauses at approval gate (**ALLOW** path). |
+| **Category 4 Typhoon** *(Hero Demo - All 4 Pillars)* | `npm run inject-alert` | `fixtures/disruption-alert.json` | Corroborates Open-Meteo telemetry, computes 14d DoS, batches concurrent dynamic subagents for ocean carrier checks, runs Python MCDA in TrueForge container sandbox via `exec`, renders Generative UI PO Diff, pauses at approval gate (**ALLOW** path). |
 | **Port Labor Strike** *(Subagent Parallelism)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Corroborates Google News RSS, batches parallel dynamic subagents via `create_sub_agent` concurrently in a single turn to query carrier capacities across child threads, re-routes away from strike. |
 | **Routine Dredging** *(Negative & Rejection Path)* | `npm run inject-alert:low` | `fixtures/low-severity-alert.json` | Detects LOW severity and 0-hour delay; logs note without re-routing. For approval rejection demo, click **DENY** on the gate to log audit record #104. |
 | **Unrelated Region Alert** *(Filter Path)* | `npm run inject-alert -- --fixture fixtures/unrelated-region-alert.json` | `fixtures/unrelated-region-alert.json` | Evaluates seismic alert in South America, confirms zero ERP supplier exposure, and cleanly terminates. |

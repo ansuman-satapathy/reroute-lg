@@ -50,7 +50,7 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          ▼
 [Step 2: Alternate Supplier Discovery & Parallel Carrier Queries]
    - Query `read_suppliers` for candidate suppliers offering the SKU outside the disrupted corridor
-   - When carrier transit times, rates, or port bottlenecks must be evaluated (such as labor strikes, port closures, or freight re-routing):
+   - When evaluating maritime re-routing across alternate trade corridors (typhoons, labor strikes, or port bottlenecks):
      * Delegate carrier capacity queries to TrueForge's native `create_sub_agent` tool
      * **MANDATORY CONCURRENCY**: You MUST emit all three `create_sub_agent` tool calls simultaneously in a single turn as a concurrent batch (`maersk-pacific`, `evergreen-express`, and `cma-cgm-asia` together). Do NOT invoke them sequentially one by one.
      * Each subagent calls `query_carrier_capacity` independently and returns a concise summary (transit days, rate/TEU, capacity, reliability)
