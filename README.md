@@ -183,9 +183,9 @@ npm run inject-alert
 
 | Scenario | Command | Fixture Path | Expected Agent Behavior |
 |:---|:---|:---|:---|
-| **Category 4 Typhoon** *(Primary Demo)* | `npm run inject-alert` | `fixtures/disruption-alert.json` | Corroborates Open-Meteo telemetry, computes 14d DoS, runs Python MCDA in sandbox, renders PO Diff, triggers gate. |
-| **Port Labor Strike** *(News Routing)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Corroborates Google News RSS, identifies Ningbo port dispute, re-routes away from compromised corridor. |
-| **Routine Dredging** *(Negative Path)* | `npm run inject-alert:low` | `fixtures/low-severity-alert.json` | Detects LOW severity and 0-hour delay; logs note without triggering unnecessary re-routing or PO amendments. |
+| **Category 4 Typhoon** *(Primary Demo - Sandbox & Gate)* | `npm run inject-alert` | `fixtures/disruption-alert.json` | Corroborates Open-Meteo telemetry, computes 14d DoS, runs Python MCDA in TrueForge container sandbox via `exec`, renders Generative UI PO Diff, pauses at approval gate (**ALLOW** path). |
+| **Port Labor Strike** *(Subagent Parallelism)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Corroborates Google News RSS, spawns parallel dynamic subagents via `create_sub_agent` to query carrier capacities across child threads, re-routes away from strike. |
+| **Routine Dredging** *(Negative & Rejection Path)* | `npm run inject-alert:low` | `fixtures/low-severity-alert.json` | Detects LOW severity and 0-hour delay; logs note without re-routing. For approval rejection demo, click **DENY** on the gate to log audit record #104. |
 | **Unrelated Region Alert** *(Filter Path)* | `npm run inject-alert -- --fixture fixtures/unrelated-region-alert.json` | `fixtures/unrelated-region-alert.json` | Evaluates seismic alert in South America, confirms zero ERP supplier exposure, and cleanly terminates. |
 | **Timing Benchmark** *(Demo Readiness)* | `npm run demo:time` | `fixtures/disruption-alert.json` | Measures wall-clock execution latency (**typically 45–60s across runs**, well within the 3-minute video limit). |
 

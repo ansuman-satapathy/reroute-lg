@@ -100,7 +100,23 @@ export async function injectDisruptionAlert(
 
   let alertPrompt: string;
   if (isHighSeverity) {
-    alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
+    if (alert.type === 'labor_dispute' || alert.event_id?.includes('LABOR')) {
+      alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
+A ${severityUpper}-SEVERITY port labor dispute alert has just been received for region "${alert.region}":
+
+${JSON.stringify(alert, null, 2)}
+
+INSTRUCTIONS:
+Execute your standard disruption triage protocol immediately per your SOP:
+1. Corroborate alert signals with live telemetry tools (Step 0) using get_news_disruptions.
+2. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
+3. Identify qualified alternate suppliers using read_suppliers. Because container terminals and port gates are halted by the dockworkers strike, evaluate candidate ocean carriers by delegating capacity, rate, and transit checks to parallel subagents using TrueForge's native create_sub_agent tool:
+   - Spawn parallel subagents — one per carrier: "maersk-pacific", "evergreen-express", and "cma-cgm-asia".
+   - Each subagent must call query_carrier_capacity for its assigned carrier and return transit days, TEU rates, and available space.
+   - Synthesize the carrier findings in your response.
+4. Formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
+    } else {
+      alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
 A ${severityUpper}-SEVERITY disruption alert has just been received for region "${alert.region}":
 
 ${JSON.stringify(alert, null, 2)}
@@ -111,6 +127,7 @@ Execute your standard disruption triage protocol immediately per your SOP:
 2. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
 3. Identify the primary supplier and discover qualified alternate suppliers using read_suppliers.
 4. Run multi-criteria cost optimization in TrueForge's sandbox via exec, formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
+    }
   } else {
     alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
 A ${severityUpper}-SEVERITY advisory has just been received for region "${alert.region}":
