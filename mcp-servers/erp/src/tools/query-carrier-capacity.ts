@@ -67,9 +67,23 @@ export async function handleQueryCarrierCapacity(params: {
     const matches = actual.includes(requested) || words.some((w: string) => actual.includes(w));
 
     if (!matches) {
-      throw new Error(
-        `Carrier "${data.carrier_name}" does not service requested route corridor "${params.route_corridor}". Serviced corridor is: "${data.routing_corridor}".`
-      );
+      return {
+        success: true,
+        carrier_id: data.carrier_id,
+        carrier_name: data.carrier_name,
+        service_tier: data.service_tier,
+        available_teu_capacity: 0,
+        transit_time_days: data.transit_time_days,
+        rate_per_teu_usd: data.rate_per_teu_usd,
+        reliability_score: data.reliability_score,
+        cutoff_window_hours: data.cutoff_window_hours,
+        next_departure: data.next_departure,
+        routing_corridor: data.routing_corridor,
+        corridor_matched: false,
+        vessel_status: 'corridor_not_serviced',
+        notes: `Carrier does not service requested corridor "${params.route_corridor}". Serviced corridor is: "${data.routing_corridor}".`,
+        queried_at: new Date().toISOString(),
+      };
     }
   }
 
