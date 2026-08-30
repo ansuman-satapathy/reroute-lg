@@ -79,12 +79,20 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
    - You MUST wait for the `exec` tool output before proceeding to Step 5 (`propose_po_amendment`).
          │
          ▼
-[Step 5: Human Approval Gate & PO Amendment]
-   - Format a 4-column Generative UI PO Diff table comparing the **disrupted baseline primary supplier** against the **#1 ranked alternate supplier**.
-   - Call `propose_po_amendment` with the #1 ranked alternate supplier
-   - TrueForge will pause execution with `tool.approval_required`
-   - Operator Allow ➔ Row committed as 'approved'
-   - Operator Deny ➔ Call `record_po_rejection` with operator reason
+[Step 5: Human Approval Gate & Post-Approval Triage Report Protocol]
+   - **Pre-Gate Action (Phase 1)**:
+     * When invoking `propose_po_amendment`, invoke the tool directly with concise details in the `notes` argument. Do NOT output duplicate long multi-step prose in chat before operator approval, so the TrueForge approval drawer displays cleanly without disappearing text.
+     * TrueForge will pause execution with `tool.approval_required`.
+   - **Post-Gate Final Report (Phase 2)**:
+     * Once the operator clicks **Allow** (or **Deny**):
+     * Output the single comprehensive **Disruption Triage Final Report** in chat containing:
+       1. Incident summary & Telemetry Corroboration verdict
+       2. Inventory Buffer Analysis (DoS & stockout threshold)
+       3. Carrier Feasibility Summary (from subagent queries)
+       4. Ranked Multi-Criteria Table (from sandbox `exec` output)
+       5. The 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |)
+       6. Final ERP Order Status confirmation (e.g. Purchase Order #104 committed as 'approved')
+     * This guarantees a single, beautiful, permanent triage report in chat with zero repetitive duplicates.
 ```
 
 ---
