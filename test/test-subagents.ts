@@ -115,6 +115,7 @@ Summarize all three carrier findings and recommend the optimal carrier for our s
   const childToolCalls: { tool: string; threadId: string; args?: any }[] = [];
   const rootToolCalls: { tool: string; args?: any }[] = [];
   const rootModelResponses: string[] = [];
+  let hasConcurrentThreeBatch = false;
 
   for (const ev of events.data || []) {
     const anyEv = ev as any;
@@ -138,6 +139,16 @@ Summarize all three carrier findings and recommend the optimal carrier for our s
 
     const calls = anyEv.tool_calls || anyEv.toolCalls;
     if (anyEv.type === 'model.message' && Array.isArray(calls)) {
+      const isRoot = !currentThreadId || currentThreadId === 'main';
+      if (isRoot) {
+        const rootSpawnsInMessage = calls
+          .map((c: any) => c.tool_info?.name || c.function?.name || c.name)
+          .filter((n: string) => n === 'create_sub_agent');
+        if (rootSpawnsInMessage.length >= 3) {
+          hasConcurrentThreeBatch = true;
+        }
+      }
+
       for (const call of calls) {
         const name = call.tool_info?.name || call.function?.name || call.name;
         const rawArgs = call.function?.arguments || call.arguments;
@@ -170,11 +181,18 @@ Summarize all three carrier findings and recommend the optimal carrier for our s
   console.log(`   - Distinct child threads created: ${createdThreads.size}`);
   console.log(`   - Distinct child threads completed: ${doneThreads.size}`);
   console.log(`   - Child thread tool calls executed: ${childToolCalls.length}`);
+  console.log(`   - Concurrent 3-subagent batch detected: ${hasConcurrentThreeBatch}`);
 
-  // Fix for Qodo #2: Require at least 2 distinct child threads created and verified completed
-  if (createdThreads.size < 2 && subAgentSpawns.length < 2) {
+  // Fix for Qodo (PR #17): Enforce that all 3 subagents were dispatched concurrently in a single message batch
+  if (!hasConcurrentThreeBatch) {
     throw new Error(
-      `❌ Expected at least 2 distinct child subagent threads created, found ${createdThreads.size} threads and ${subAgentSpawns.length} spawn calls.`
+      `❌ Concurrency Violation: Expected all 3 create_sub_agent calls to be batched concurrently within a single root model.message, but no 3-call batch was found.`
+    );
+  }
+
+  if (createdThreads.size < 3 || subAgentSpawns.length < 3) {
+    throw new Error(
+      `❌ Expected exactly 3 distinct child subagent threads created and completed, found ${createdThreads.size} threads and ${subAgentSpawns.length} spawn calls.`
     );
   }
 
