@@ -112,7 +112,7 @@ Execute your standard disruption triage protocol immediately per your SOP:
 2. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
 3. Identify qualified alternate suppliers using read_suppliers. Because container terminals and port gates are halted by the dockworkers strike, evaluate candidate ocean carriers by delegating capacity, rate, and transit checks to parallel subagents using TrueForge's native create_sub_agent tool:
    - Spawn parallel subagents — one per carrier: "maersk-pacific", "evergreen-express", and "cma-cgm-asia".
-   - Each subagent must call query_carrier_capacity for its assigned carrier and return transit days, TEU rates, and available space.
+   - Each subagent must call query_carrier_capacity for its assigned carrier identifier (e.g. carrier: "maersk-pacific") and return transit days, TEU rates, and available space.
    - Synthesize the carrier findings in your response.
 4. Formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
     } else {
@@ -156,7 +156,7 @@ Evaluate this incoming advisory per your disruption-triage SOP trigger rules. No
   // 6. Poll until turn finishes (allows sufficient time for multi-step agent reasoning & tool execution)
   let turnStatus = 'running';
   let completedTurn;
-  const maxPollAttempts = 60;
+  const maxPollAttempts = 80;
 
   for (let i = 0; i < maxPollAttempts; i++) {
     await new Promise((r) => setTimeout(r, 3000));
