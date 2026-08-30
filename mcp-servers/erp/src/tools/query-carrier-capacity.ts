@@ -11,10 +11,18 @@ const CARRIER_FIXTURES_DIR = path.resolve(__dirname, '../../../../fixtures/carri
 export const queryCarrierCapacitySchema = {
   carrier: z
     .string()
-    .min(1)
+    .optional()
     .describe(
       'Name or ID of carrier to query (e.g. "maersk-pacific", "evergreen-express", "cma-cgm-asia")'
     ),
+  carrier_id: z
+    .string()
+    .optional()
+    .describe('Alias for carrier name or ID (e.g. "maersk-pacific", "evergreen-express", "cma-cgm-asia")'),
+  input: z
+    .any()
+    .optional()
+    .describe('Nested input object if forwarded from subagent tool proxy'),
   route_corridor: z
     .string()
     .optional()
@@ -38,16 +46,31 @@ const CARRIER_ALIASES: Record<string, string> = {
 };
 
 export async function handleQueryCarrierCapacity(params: {
-  carrier: string;
+  carrier?: string;
+  carrier_id?: string;
+  input?: any;
   route_corridor?: string;
 }) {
-  const normalizedKey = params.carrier.toLowerCase().trim();
+  const rawCarrier =
+    params.carrier ||
+    params.carrier_id ||
+    params.input?.carrier ||
+    params.input?.carrier_id ||
+    (typeof params.input === 'string' ? params.input : '') ||
+    '';
+
+  if (!rawCarrier) {
+    throw new Error(
+      'Missing required carrier parameter. Please specify carrier (e.g. "maersk-pacific", "evergreen-express", "cma-cgm-asia").'
+    );
+  }
+
+  const normalizedKey = rawCarrier.toLowerCase().trim();
   const canonicalId = CARRIER_ALIASES[normalizedKey];
 
   if (!canonicalId) {
-    const validCarriers = Object.keys(CARRIER_ALIASES);
     throw new Error(
-      `Unknown carrier "${params.carrier}". Available carrier options are: "maersk-pacific", "evergreen-express", "cma-cgm-asia".`
+      `Unknown carrier "${rawCarrier}". Available carrier options are: "maersk-pacific", "evergreen-express", "cma-cgm-asia".`
     );
   }
 
@@ -59,31 +82,17 @@ export async function handleQueryCarrierCapacity(params: {
 
   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-  // Fix for Qodo #1: Validate and filter by requested route_corridor if specified
-  if (params.route_corridor) {
-    const requested = params.route_corridor.toLowerCase().trim();
+  const requestedCorridor = params.route_corridor || params.input?.route_corridor;
+  if (requestedCorridor) {
+    const requested = String(requestedCorridor).toLowerCase().trim();
     const actual = data.routing_corridor.toLowerCase();
     const words = requested.split(/[\s,/]+/).filter(Boolean);
     const matches = actual.includes(requested) || words.some((w: string) => actual.includes(w));
 
     if (!matches) {
-      return {
-        success: true,
-        carrier_id: data.carrier_id,
-        carrier_name: data.carrier_name,
-        service_tier: data.service_tier,
-        available_teu_capacity: 0,
-        transit_time_days: data.transit_time_days,
-        rate_per_teu_usd: data.rate_per_teu_usd,
-        reliability_score: data.reliability_score,
-        cutoff_window_hours: data.cutoff_window_hours,
-        next_departure: data.next_departure,
-        routing_corridor: data.routing_corridor,
-        corridor_matched: false,
-        vessel_status: 'corridor_not_serviced',
-        notes: `Carrier does not service requested corridor "${params.route_corridor}". Serviced corridor is: "${data.routing_corridor}".`,
-        queried_at: new Date().toISOString(),
-      };
+      throw new Error(
+        `Carrier "${data.carrier_name}" does not service requested route corridor "${requestedCorridor}". Serviced corridor is: "${data.routing_corridor}".`
+      );
     }
   }
 
