@@ -153,11 +153,16 @@ npm run config:agent
 npm run inject-alert
 ```
 
-### 7. Interactive Human Approval
+### 7. Interactive Human Approval & Audit Verification
 1. Open `http://localhost:8790` in your browser.
 2. Select the active session.
-3. Observe live telemetry, inventory buffer calculation, expanded `exec` sandbox code execution, and the Generative UI PO Diff table.
+3. Observe live telemetry, inventory buffer calculation, concurrent carrier subagents, expanded `exec` sandbox code execution, and the Generative UI PO Diff table.
 4. Click **Allow** on the approval gate to commit Purchase Order #104.
+5. In your terminal, verify the amended database audit trail:
+   ```bash
+   npm run db:audit
+   ```
+   *(Outputs the clean before-and-after table demonstrating re-routing from Oceanic Bearings Ltd #103 to IndoPacific Parts Corp #104).*
 
 ---
 
@@ -169,6 +174,7 @@ npm run inject-alert
 | **Port Labor Strike** *(Subagent Parallelism)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Corroborates Google News RSS, batches parallel dynamic subagents via `create_sub_agent` concurrently in a single turn to query carrier capacities across child threads, re-routes away from strike. |
 | **Routine Dredging** *(Negative & Rejection Path)* | `npm run inject-alert:low` | `fixtures/low-severity-alert.json` | Detects LOW severity and 0-hour delay; logs note without re-routing. For approval rejection demo, click **DENY** on the gate to log audit record #104. |
 | **Unrelated Region Alert** *(Filter Path)* | `npm run inject-alert -- --fixture fixtures/unrelated-region-alert.json` | `fixtures/unrelated-region-alert.json` | Evaluates seismic alert in South America, confirms zero ERP supplier exposure, and cleanly terminates. |
+| **ERP Audit Verification** *(Ledger Inspection)* | `npm run db:audit` | `data/erp.db` | Displays formatted PO ledger before and after triage, proving re-routing from Oceanic Bearings (#103) to IndoPacific (#104). |
 | **Timing Benchmark** *(Demo Readiness)* | `npm run demo:time` | `fixtures/disruption-alert.json` | Measures wall-clock execution latency (**typically 45–60s across runs**, well within the 3-minute video limit). |
 
 ---
