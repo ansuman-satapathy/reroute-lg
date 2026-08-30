@@ -63,7 +63,7 @@ flowchart LR
     Alert["🚨 Disruption Alert<br/>(Typhoon / Strike)"] --> Agent
 
     subgraph TF["TrueForge Agent Harness (Port 8790)"]
-        Agent["🤖 Disruption Triage Agent<br/>(Nemotron-3-Super 120B)"]
+        Agent["🤖 Disruption Triage Agent<br/>(LLM Reasoning Engine)"]
         Subagents["🧵 Dynamic Subagents<br/>Parallel Carrier Checks"]
         Sandbox["📦 Container Sandbox<br/>exec(Python MCDA Scoring)"]
         Gate{"🛡️ Approval Gate<br/>tool.approval_required"}

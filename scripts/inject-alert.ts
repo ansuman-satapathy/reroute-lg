@@ -114,7 +114,7 @@ Execute your standard disruption triage protocol immediately per your SOP:
    - Spawn parallel subagents — one per carrier: "maersk-pacific", "evergreen-express", and "cma-cgm-asia".
    - Each subagent must call query_carrier_capacity for its assigned carrier identifier (e.g. carrier: "maersk-pacific") and return transit days, TEU rates, and available space.
    - Synthesize the carrier findings in your response.
-4. Formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
+4. Run multi-criteria cost optimization in TrueForge's sandbox via exec across qualified candidates, formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
     } else {
       alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
 A ${severityUpper}-SEVERITY disruption alert has just been received for region "${alert.region}":
