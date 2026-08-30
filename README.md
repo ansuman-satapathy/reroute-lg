@@ -50,7 +50,7 @@ ReRoute-LG strikes the balance: **autonomous investigation paired with determini
 ReRoute-LG directly exercises every core capability of the TrueForge agent harness:
 
 - **1. Remote Model Context Protocol (MCP) Connectors**: Decouples enterprise systems into two remote MCP microservices communicating over Server-Sent Events (SSE): `erp-mcp` (Port 3001, enterprise database) and `telemetry-mcp` (Port 3002, live weather & news feeds).
-- **2. Parallel Dynamic Subagents**: Spawns isolated child agent threads using TrueForge's native `create_sub_agent` tool to evaluate transit times, rates per TEU, and space allocations across multiple ocean carriers in parallel (`maersk-pacific`, `evergreen-express`, `cma-cgm-asia`).
+- **2. Parallel Dynamic Subagents**: Emits concurrent multi-tool calls to TrueForge's native `create_sub_agent` tool in a single turn, spawning isolated child agent threads that evaluate transit times, rates per TEU, and space allocations across multiple ocean carriers in parallel (`maersk-pacific`, `evergreen-express`, `cma-cgm-asia`).
 - **3. Native Container Sandbox (`exec`)**: Instead of relying on static server-side ranking, the agent writes a Python Multi-Criteria Decision Analysis (MCDA) script on the fly and executes it inside TrueForge's persistent container sandbox via the built-in `exec` tool to compute weighted composite trade-offs (40% Cost, 30% Lead Time, 30% Reliability).
 - **4. Human-in-the-Loop Approval Gate**: Enforces zero unauthorized database mutations via TrueForge's native `tool.approval_required` policy on `propose_po_amendment`. The agent renders a 4-column Generative UI PO Diff table in chat and halts execution until an operator clicks **Allow** or **Deny**.
 
@@ -166,7 +166,7 @@ npm run inject-alert
 | Scenario | Command | Fixture Path | Expected Agent Behavior |
 |:---|:---|:---|:---|
 | **Category 4 Typhoon** *(Primary Demo - Sandbox & Gate)* | `npm run inject-alert` | `fixtures/disruption-alert.json` | Corroborates Open-Meteo telemetry, computes 14d DoS, runs Python MCDA in TrueForge container sandbox via `exec`, renders Generative UI PO Diff, pauses at approval gate (**ALLOW** path). |
-| **Port Labor Strike** *(Subagent Parallelism)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Corroborates Google News RSS, spawns parallel dynamic subagents via `create_sub_agent` to query carrier capacities across child threads, re-routes away from strike. |
+| **Port Labor Strike** *(Subagent Parallelism)* | `npm run inject-alert:strike` | `fixtures/strike-alert.json` | Corroborates Google News RSS, batches parallel dynamic subagents via `create_sub_agent` concurrently in a single turn to query carrier capacities across child threads, re-routes away from strike. |
 | **Routine Dredging** *(Negative & Rejection Path)* | `npm run inject-alert:low` | `fixtures/low-severity-alert.json` | Detects LOW severity and 0-hour delay; logs note without re-routing. For approval rejection demo, click **DENY** on the gate to log audit record #104. |
 | **Unrelated Region Alert** *(Filter Path)* | `npm run inject-alert -- --fixture fixtures/unrelated-region-alert.json` | `fixtures/unrelated-region-alert.json` | Evaluates seismic alert in South America, confirms zero ERP supplier exposure, and cleanly terminates. |
 | **Timing Benchmark** *(Demo Readiness)* | `npm run demo:time` | `fixtures/disruption-alert.json` | Measures wall-clock execution latency (**typically 45–60s across runs**, well within the 3-minute video limit). |
