@@ -123,10 +123,13 @@ ${JSON.stringify(alert, null, 2)}
 
 INSTRUCTIONS:
 Execute your standard disruption triage protocol immediately per your SOP:
-1. Corroborate alert signals with live telemetry tools (Step 0).
+1. Corroborate alert signals with live telemetry tools (Step 0) using get_weather_alerts or get_news_disruptions.
 2. Inspect inventory buffer vulnerability for parts sourced from "${alert.region}" using read_inventory.
-3. Identify the primary supplier and discover qualified alternate suppliers using read_suppliers.
-4. Run multi-criteria cost optimization in TrueForge's sandbox via exec, formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
+3. Identify qualified alternate suppliers using read_suppliers. Because maritime shipping lanes and container terminals are disrupted, evaluate candidate ocean carriers to confirm alternate corridor viability by delegating capacity, rate, and transit checks to parallel subagents using TrueForge's native create_sub_agent tool:
+   - **MANDATORY CONCURRENCY**: You MUST emit all three create_sub_agent tool calls simultaneously in a single turn as a concurrent batch ("maersk-pacific", "evergreen-express", and "cma-cgm-asia" together). Do NOT invoke them sequentially one by one.
+   - Each subagent must call query_carrier_capacity for its assigned carrier identifier (e.g. carrier: "maersk-pacific") and return transit days, TEU rates, and available space.
+   - Synthesize the carrier findings in your response.
+4. Run multi-criteria cost optimization in TrueForge's sandbox via exec across qualified candidates, formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
     }
   } else {
     alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
@@ -287,10 +290,9 @@ Evaluate this incoming advisory per your disruption-triage SOP trigger rules. No
   const hasInventoryCheck = toolsCalled.includes('read_inventory');
   const hasSupplierCheck = toolsCalled.includes('read_suppliers');
 
-  // Fix for Qodo (PR #17): For strike alerts requiring subagents, enforce that all 3 carrier subagents were dispatched concurrently in a single message batch
-  const isStrikeScenario = Boolean(alert.event_id && alert.event_id.includes('LABOR'));
+  // Fix for Qodo (PR #17): For all high severity alerts requiring subagents, enforce that all 3 carrier subagents were dispatched concurrently in a single message batch
   let hasConcurrentSubagentBatch = true;
-  if (isStrikeScenario) {
+  if (isHighSeverity) {
     hasConcurrentSubagentBatch = false;
     for (const ev of events) {
       const anyEv = ev as any;
