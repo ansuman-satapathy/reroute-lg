@@ -55,6 +55,7 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
      * Spawn parallel subagents — one per carrier (`maersk-pacific`, `evergreen-express`, `cma-cgm-asia`)
      * Each subagent calls `query_carrier_capacity` independently and returns a concise summary (transit days, rate/TEU, capacity, reliability)
      * Intermediate subagent tool executions remain isolated in their own subagent threads, returning only condensed findings to the root context
+     * **Carrier Purpose**: Supplier quotes (`unit_cost`, `lead_time_days`) represent door-to-door fulfillment. Carrier queries provide logistical feasibility validation—verifying that alternate routes have active sailings and unconstrained space (TEU capacity > 0) to bypass congested strike ports.
          │
          ▼
 [Step 3: Guardrail & Cost-Band Filtering]
@@ -65,10 +66,13 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
          ▼
 [Step 4: Multi-Criteria Optimization & Ranked Recommendation]
    - You MUST generate and execute a Python cost-optimization script inside TrueForge's container sandbox using the native `exec` tool.
-   - The script must calculate composite scores across eligible candidates using weights:
-     * Landed Cost: 40% (0.40) weight
-     * Lead Time: 30% (0.30) weight
-     * Reliability: 30% (0.30) weight
+   - Use standard Min-Max normalization across eligible candidates to scale each metric to [0, 1]:
+     * Cost Score: `(max_cost - cost) / (max_cost - min_cost)` (lower cost yields higher score)
+     * Lead Time Score: `(max_lead - lead) / (max_lead - min_lead)` (shorter lead time yields higher score)
+     * Reliability Score: `(reliability - min_rel) / (max_rel - min_rel)` (higher reliability yields higher score)
+     *(If max == min for any metric, assign a neutral normalized score of 1.0)*
+   - Compute weighted composite score:
+     `Composite = (0.40 * Cost_Score) + (0.30 * Lead_Time_Score) + (0.30 * Reliability_Score)`
    - Output a human-readable ranked table (Rank, Supplier Name, Landed Cost, Lead Time, Reliability, Composite Score, Status)
    - Ensure the highest-scoring compliant alternate supplier outside the disrupted corridor outranks cheap-but-slow alternatives that exceed stockout thresholds
          │
