@@ -14,6 +14,7 @@
     "db:init": "tsx db/init-db.ts",
     "db:reset": "tsx db/init-db.ts",
     "db:verify": "tsx db/verify-db.ts",
+    "db:audit": "sqlite3 data/erp.db -header -column \"SELECT po.id AS 'PO #', po.sku AS 'SKU', s.name AS 'Supplier Name', s.region AS 'Origin Region', po.quantity AS 'Qty', printf('$%.2f', po.unit_cost) AS 'Unit Cost', printf('$%.2f', po.total_cost) AS 'Total Cost', po.status AS 'Status', po.created_at AS 'Timestamp' FROM purchase_orders po JOIN suppliers s ON po.supplier_id = s.id WHERE po.sku = 'SKU-4471' ORDER BY po.id ASC;\"",
     "dev:erp": "tsx mcp-servers/erp/src/index.ts",
     "test:erp": "tsx mcp-servers/erp/test-tools.ts",
     "dev:telemetry": "tsx mcp-servers/telemetry/src/index.ts",
