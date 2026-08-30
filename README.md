@@ -22,9 +22,8 @@
 5. [Quickstart: Running the Demo](#quickstart-running-the-demo)
 6. [Demo Scenarios & Test Fixtures](#demo-scenarios--test-fixtures)
 7. [Production Migration Strategy](#production-migration-strategy)
-8. [Software Requirements Specification (SRS) & Traceability](#software-requirements-specification-srs--traceability)
-9. [Qodo Code Review Evidence](#qodo-code-review-evidence)
-10. [Automated Verification Matrix](#automated-verification-matrix)
+8. [Qodo Code Review Evidence](#qodo-code-review-evidence)
+9. [Automated Verification Matrix](#automated-verification-matrix)
 
 ---
 
@@ -200,25 +199,7 @@ npm run inject-alert
 | **ERP Ledger** | **SQLite Ledger (`data/erp.db`)**<br/>Lightweight, deterministic ACID database with foreign keys & check constraints. | **SAP S/4HANA or Oracle Cloud ERP**<br/>Swap SQLite queries in `db.ts` with SAP BAPI, OData, or NetSuite REST APIs. |
 | **Human Authorization** | **TrueForge UI Interactive Modal**<br/>Operator reviews Generative UI PO Diff and authorizes via **Allow / Deny** buttons. | **TrueForge Slack / Teams Integration**<br/>Interactive approval card dispatched to enterprise `#supply-chain-ops` channel. |
 
----
 
-## Software Requirements Specification (SRS) & Traceability
-
-Every pull request, commit, and test in ReRoute-LG links to a formal Functional Requirement (`FR-1` through `FR-23`) and Non-Functional Requirement (`NFR-1` through `NFR-5`). The complete specification is maintained in:
-
-👉 **[Complete Software Requirements Specification (docs/SRS.md)](docs/SRS.md)**
-
-### Requirements Traceability Summary
-| Domain | Requirement IDs | Core Capabilities & Gating | Primary PRs |
-|:---|:---:|:---|:---:|
-| **Agent Harness** | `FR-1` – `FR-5` | TrueForge session setup, Nemotron-3 steering, MCP hubs, SOP skill injection | PR #1, #5, #11 |
-| **External Telemetry** | `FR-6` – `FR-8` | Live marine weather (Open-Meteo), news RSS, normalized signal schemas | PR #4 |
-| **ERP Data Access** | `FR-9` – `FR-11a` | Inventory buffer & Days of Supply (DoS), supplier quotes, strict SQL write allowlist | PR #2, #3, #6 |
-| **Operational Guardrails**| `FR-12` – `FR-15` | High-severity routing, <= +50% cost band, >= 0.75 reliability, lead time < DoS | PR #7, #11 |
-| **Subagent Delegation** | `FR-16` – `FR-17` | Parallel carrier evaluations via `create_sub_agent`, trace linkage | PR #8 |
-| **Sandboxed Optimization** | `FR-18` – `FR-19` | Generated Python MCDA running in TrueForge container sandbox via `exec` | PR #9, #14 |
-| **Approval Gate & Diff** | `FR-20` – `FR-23` | Generative UI PO Diff, TrueForge `tool.approval_required` gate, Allow/Deny paths | PR #10, #11, #13 |
-| **Non-Functional** | `NFR-1` – `NFR-5` | Zero secrets, sub-90s latency (45–60s), 24h PO idempotency, audit trail replay | PR #1, #10, #11, #12 |
 
 ---
 
