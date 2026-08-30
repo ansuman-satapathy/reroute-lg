@@ -64,18 +64,18 @@ When triggered by a **HIGH** severity event, execute these phases in exact order
    - Lead Time Constraint: ≤ 30 days AND `lead_time_days < Days of Supply`
          │
          ▼
-[Step 4: Multi-Criteria Optimization & Ranked Recommendation]
-   - You MUST generate and execute a Python cost-optimization script inside TrueForge's container sandbox using the native `exec` tool.
+[Step 4: Multi-Criteria Optimization & Container Sandbox Execution]
+   - **MANDATORY CONTAINER TOOL CALL**: You MUST invoke TrueForge's built-in `exec` tool to run a Python cost-optimization script inside the container sandbox. Do NOT calculate or present composite scores in chat text without executing the code via `exec` first.
    - **Target Population**: Evaluate and rank all **eligible alternate suppliers** (those passing Step 3 guardrails). Do not include the disrupted primary supplier in the candidate optimization pool.
-   - Use standard Min-Max normalization across eligible candidates to scale each metric to [0, 1]:
+   - The Python script executed via `exec` must apply standard Min-Max normalization across eligible candidates:
      * Cost Score: `(max_cost - cost) / (max_cost - min_cost)` (lower cost yields higher score)
      * Lead Time Score: `(max_lead - lead) / (max_lead - min_lead)` (shorter lead time yields higher score)
      * Reliability Score: `(reliability - min_rel) / (max_rel - min_rel)` (higher reliability yields higher score)
      *(If max == min for any metric, assign a neutral normalized score of 1.0)*
    - Compute weighted composite score:
      `Composite = (0.40 * Cost_Score) + (0.30 * Lead_Time_Score) + (0.30 * Reliability_Score)`
-   - Output a human-readable ranked table (Rank, Supplier Name, Landed Cost, Lead Time, Reliability, Composite Score, Status)
-   - Ensure the highest-scoring compliant alternate supplier outside the disrupted corridor outranks cheap-but-slow alternatives that exceed stockout thresholds
+   - The script must print a human-readable ranked table (Rank, Supplier Name, Landed Cost, Lead Time, Reliability, Composite Score, Status) to stdout.
+   - You MUST wait for the `exec` tool output before proceeding to Step 5 (`propose_po_amendment`).
          │
          ▼
 [Step 5: Human Approval Gate & PO Amendment]
