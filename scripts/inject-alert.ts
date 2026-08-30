@@ -114,7 +114,8 @@ Execute your standard disruption triage protocol immediately per your SOP:
    - **MANDATORY CONCURRENCY**: You MUST emit all three create_sub_agent tool calls simultaneously in a single turn as a concurrent batch ("maersk-pacific", "evergreen-express", and "cma-cgm-asia" together). Do NOT invoke them sequentially one by one.
    - Each subagent must call query_carrier_capacity for its assigned carrier identifier (e.g. carrier: "maersk-pacific") and return transit days, TEU rates, and available space.
    - Synthesize the carrier findings in your response.
-4. Run multi-criteria cost optimization in TrueForge's sandbox via exec across qualified candidates, formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
+4. MANDATORY SANDBOX CODE EXECUTION: You MUST call the exec tool to run a Python cost-optimization script inside TrueForge's container sandbox. Do NOT calculate or display scores in text without executing the Python script via exec first. The Python script must calculate composite scores and print the ranked table.
+5. After receiving the exec output, formulate your re-routing recommendation, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
     } else {
       alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
 A ${severityUpper}-SEVERITY disruption alert has just been received for region "${alert.region}":
@@ -129,7 +130,8 @@ Execute your standard disruption triage protocol immediately per your SOP:
    - **MANDATORY CONCURRENCY**: You MUST emit all three create_sub_agent tool calls simultaneously in a single turn as a concurrent batch ("maersk-pacific", "evergreen-express", and "cma-cgm-asia" together). Do NOT invoke them sequentially one by one.
    - Each subagent must call query_carrier_capacity for its assigned carrier identifier (e.g. carrier: "maersk-pacific") and return transit days, TEU rates, and available space.
    - Synthesize the carrier findings in your response.
-4. Run multi-criteria cost optimization in TrueForge's sandbox via exec across qualified candidates, formulate re-routing recommendations, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
+4. MANDATORY SANDBOX CODE EXECUTION: You MUST call the exec tool to run a Python cost-optimization script inside TrueForge's container sandbox. Do NOT calculate or display scores in text without executing the Python script via exec first. The Python script must calculate composite scores and print the ranked table.
+5. After receiving the exec output, formulate your re-routing recommendation, output the complete 4-column Generative UI PO Diff Markdown table (| Metric | Baseline | Proposed Alternate | Variance / Delta |) directly in your chat response, and invoke propose_po_amendment to pause at the operator approval gate.`;
     }
   } else {
     alertPrompt = `[INCOMING AUTOMATED WEBHOOK ALERT - ${alert.event_id}]
