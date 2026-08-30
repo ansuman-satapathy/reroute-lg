@@ -228,15 +228,16 @@ Across the development lifecycle, every pull request was audited by **Qodo** acr
 
 ### Key Remediations Addressed via Qodo Review
 
-| Area | Severity | Resolution Summary | Pull Request |
+| Feature Domain | Severity | Qodo Review Remediation | Pull Request |
 |:---|:---:|:---|:---:|
-| **Sandbox Execution** | High | Mandated TrueForge native `exec` sandbox tool for Python MCDA scoring; eliminated stale fallback references. | **[PR #14](https://github.com/ansuman-satapathy/reroute-lg/pull/14)** |
-| **Database Reset Inodes** | High | Preserved SQLite file inodes in `db:reset` using in-place table drops, preventing stale file descriptor errors in active daemons. | **[PR #13](https://github.com/ansuman-satapathy/reroute-lg/pull/13)** |
-| **Stockout Boundary & Idempotency**| High | Enforced strict `lead_time_days >= daysOfSupply` boundary condition and added automated 24h idempotency test suite. | **[PR #12](https://github.com/ansuman-satapathy/reroute-lg/pull/12)** |
-| **SQL Security Policy** | High | Enforced strict write allowlist in `getErpWriteDb()` restricting schema mutations exclusively to `purchase_orders`. | **[PR #3](https://github.com/ansuman-satapathy/reroute-lg/pull/3)** |
-| **Canonical SKU Identity** | High | Added canonical `sku` column and `idx_po_sku` index to `purchase_orders`, eliminating fuzzy note matching for exact idempotency. | **[PR #2](https://github.com/ansuman-satapathy/reroute-lg/pull/2)** |
-| **Subagent Thread Isolation** | Medium | Verified child tool calls isolate strictly inside subagent threads without polluting parent context. | **[PR #8](https://github.com/ansuman-satapathy/reroute-lg/pull/8)** |
-| **Gate Test Rigor** | Medium | Enforced `status === 'done'` strictly on both approval and denial paths, disallowing masking of post-execution turn errors. | **[PR #10](https://github.com/ansuman-satapathy/reroute-lg/pull/10)** |
+| **TrueForge Sandbox Code Execution** | High | Mandated TrueForge native `exec` container sandbox tool for Python MCDA scoring; eliminated stale server-side fallback strings and generalized ranking rules to prevent hardcoded winners. | **[PR #14](https://github.com/ansuman-satapathy/reroute-lg/pull/14)** |
+| **Human-in-the-Loop Approval Gate** | High | Enforced strict `status === 'done'` on both approval and denial paths; ensured audit rejection logging executes reliably when operator clicks DENY. | **[PR #10](https://github.com/ansuman-satapathy/reroute-lg/pull/10)** |
+| **Parallel Dynamic Subagents** | Medium | Enforced strict child thread isolation in `create_sub_agent` execution trace, preventing subagent tool calls from polluting root conversation context. | **[PR #8](https://github.com/ansuman-satapathy/reroute-lg/pull/8)** |
+| **Multi-Criteria Optimization Engine** | High | Fixed edge cases where all alternate suppliers violate guardrails; ensured composite scoring function returns null safely instead of recommending an out-of-band supplier. | **[PR #9](https://github.com/ansuman-satapathy/reroute-lg/pull/9)** |
+| **Operational Guardrails & Skill SOP** | High | Remediated edge cases where Days of Supply (DoS) calculation produces division-by-zero or negative values when warehouse inventory is depleted. | **[PR #7](https://github.com/ansuman-satapathy/reroute-lg/pull/7)** |
+| **Autonomous Alert Ingestion Gateway** | High | Dynamically generated alert prompts so low-severity advisories exercise negative SOP paths without initiating unnecessary re-routing. | **[PR #6](https://github.com/ansuman-satapathy/reroute-lg/pull/6)** |
+| **Live Telemetry MCP Server** | Medium | Added resilient fallback handling for missing coordinate schemas in Open-Meteo queries and validated Google News RSS XML item parsing. | **[PR #4](https://github.com/ansuman-satapathy/reroute-lg/pull/4)** |
+| **24h PO Idempotency & Stockout Bounds** | High | Enforced strict boundary condition (`lead_time_days >= daysOfSupply`) and added canonical SKU index to prevent duplicate PO amendments within 24 hours. | **[PR #12](https://github.com/ansuman-satapathy/reroute-lg/pull/12)** |
 
 ---
 
