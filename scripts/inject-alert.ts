@@ -283,10 +283,31 @@ Evaluate this incoming advisory per your disruption-triage SOP trigger rules. No
   console.log(`   - Total tools executed: ${toolsCalled.length}`);
   console.log(`   - Tool list: ${toolsCalled.join(', ') || 'None'}`);
 
-  // Fix for Qodo #2: Require BOTH read_inventory AND read_suppliers
+  // Fix for Qodo #2 & PR #17: Require BOTH read_inventory AND read_suppliers
   const hasInventoryCheck = toolsCalled.includes('read_inventory');
   const hasSupplierCheck = toolsCalled.includes('read_suppliers');
-  const autoTriggeredEvaluation = hasInventoryCheck && hasSupplierCheck;
+
+  // Fix for Qodo (PR #17): For strike alerts requiring subagents, enforce that all 3 carrier subagents were dispatched concurrently in a single message batch
+  const isStrikeScenario = Boolean(alert.event_id && alert.event_id.includes('LABOR'));
+  let hasConcurrentSubagentBatch = true;
+  if (isStrikeScenario) {
+    hasConcurrentSubagentBatch = false;
+    for (const ev of events) {
+      const anyEv = ev as any;
+      const calls = anyEv.tool_calls || anyEv.toolCalls;
+      if (anyEv.type === 'model.message' && Array.isArray(calls)) {
+        const subagentCalls = calls
+          .map((c: any) => extractToolName(c))
+          .filter((name: string | null) => name === 'create_sub_agent');
+        if (subagentCalls.length >= 3) {
+          hasConcurrentSubagentBatch = true;
+          break;
+        }
+      }
+    }
+  }
+
+  const autoTriggeredEvaluation = hasInventoryCheck && hasSupplierCheck && hasConcurrentSubagentBatch;
 
   if (agentResponse) {
     console.log(`\n💬 Agent Triage Response:`);
