@@ -59,48 +59,31 @@ ReRoute-LG directly exercises every core capability of the TrueForge agent harne
 ## System Architecture & Data Flow
 
 ```mermaid
-flowchart TD
-    subgraph Ingestion["1. Disruption Ingestion"]
-        Alert["Incoming Webhook Alert<br/>(Typhoon / Strike / Delay)"] --> IngestScript["scripts/inject-alert.ts"]
+flowchart LR
+    Alert["🚨 Disruption Alert<br/>(Typhoon / Strike)"] --> Agent
+
+    subgraph TF["TrueForge Agent Harness (Port 8790)"]
+        Agent["🤖 Disruption Triage Agent<br/>(Nemotron-3-Super 120B)"]
+        Subagents["🧵 Dynamic Subagents<br/>Parallel Carrier Checks"]
+        Sandbox["📦 Container Sandbox<br/>exec(Python MCDA Scoring)"]
+        Gate{"🛡️ Approval Gate<br/>tool.approval_required"}
+
+        Agent <--> Subagents
+        Agent <--> Sandbox
+        Agent --> Gate
     end
 
-    subgraph Harness["2. TrueForge Agent Harness (Port 8790)"]
-        IngestScript -->|"Create Session & Turn"| RootAgent["Disruption Triage Agent<br/>(Root Agent Thread)"]
-        SOP["SOP Skill<br/>(disruption-triage)"] -.->|"System Instructions"| RootAgent
-
-        subgraph Subagents["Pillar 2: Parallel Dynamic Subagents"]
-            RootAgent -->|"create_sub_agent"| Sub1["Subagent 1<br/>(Maersk Pacific)"]
-            RootAgent -->|"create_sub_agent"| Sub2["Subagent 2<br/>(Evergreen Express)"]
-            RootAgent -->|"create_sub_agent"| Sub3["Subagent 3<br/>(CMA CGM Asia)"]
-        end
-
-        subgraph Sandbox["Pillar 3: Native Container Sandbox"]
-            RootAgent -->|"exec (Generated Python MCDA)"| PyEnv["Python 3.13 Container Sandbox<br/>40% Cost / 30% Lead / 30% Rel"]
-            PyEnv -->|"stdout: Ranked Recommendations"| RootAgent
-        end
-
-        subgraph Approval["Pillar 4: Human-in-the-Loop Gate"]
-            RootAgent -->|"Renders Generative UI Diff"| DiffTable["4-Column PO Diff Table<br/>(Baseline vs Alternate)"]
-            DiffTable -->|"Gated Call"| Gate{"propose_po_amendment<br/>tool.approval_required"}
-            Gate -->|"Operator: ALLOW"| Commit["Approved PO<br/>(status='approved')"]
-            Gate -->|"Operator: DENY"| Reject["Rejection Audit Record<br/>(status='rejected')"]
-        end
+    subgraph MCP["Remote MCP Connectors"]
+        Telemetry["📡 Telemetry MCP (Port 3002)<br/>Live Weather & News APIs"]
+        ERP["🏢 ERP MCP (Port 3001)<br/>Inventory, Suppliers, Freight"]
     end
 
-    subgraph MCP["Pillar 1: Dual Remote MCP Connectors"]
-        subgraph TelemetryMCP["Telemetry MCP Server (Port 3002)"]
-            RootAgent -->|"get_weather_alerts"| Weather["Open-Meteo Marine API"]
-            RootAgent -->|"get_news_disruptions"| News["Google News RSS Feed"]
-        end
+    Agent <--> Telemetry
+    Agent <--> ERP
+    Subagents <--> ERP
 
-        subgraph ErpMCP["ERP MCP Server (Port 3001)"]
-            RootAgent -->|"read_inventory"| Inv[("Inventory Buffer<br/>Stock: 140 | Burn: 10/d")]
-            RootAgent -->|"read_suppliers"| Sup[("Supplier Catalog<br/>4 Candidates")]
-            Sub1 & Sub2 & Sub3 -->|"query_carrier_capacity"| Freight[("Carrier Rates & Capacity")]
-            Commit -->|"INSERT status='approved'"| Sqlite[("SQLite ERP Ledger<br/>purchase_orders")]
-            Reject -->|"INSERT status='rejected'"| Sqlite
-        end
-    end
+    Gate -->|"ALLOW"| Commit["✅ Approved PO<br/>(status='approved')"]
+    Gate -->|"DENY"| Reject["❌ Rejection Audit<br/>(status='rejected')"]
 ```
 
 ---
