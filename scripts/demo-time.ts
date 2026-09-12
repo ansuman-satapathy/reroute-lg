@@ -20,7 +20,7 @@ interface StepTiming {
 }
 
 export async function measureTriageExecutionTiming(): Promise<StepTiming[]> {
-  console.log('⏱️ Starting End-to-End Triage Timing Benchmark (Pre-Submission Audit #9)...');
+  console.log('⏱️ Starting End-to-End Triage Timing & Latency Benchmark...');
   console.log(`🔌 Connecting to TrueForge instance at: ${TRUEFORGE_BASE_URL}`);
   const client = new TrueForge({ baseUrl: TRUEFORGE_BASE_URL });
 
