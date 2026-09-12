@@ -6,7 +6,6 @@
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Standard%201.6-purple.svg)](https://modelcontextprotocol.io/)
 [![Model](https://img.shields.io/badge/Model-Nemotron--3--Super--120B%20(NVIDIA%20NIM)-76B900.svg)](https://www.nvidia.com/en-us/ai-data-science/products/nim/)
 [![Database](https://img.shields.io/badge/Database-SQLite-blue.svg)](https://www.sqlite.org/)
-[![Code Review](https://img.shields.io/badge/Code_Review-Qodo_Verified-blueviolet.svg)](https://www.qodo.ai/)
 
 > **AI Disclosure**: AI coding assistants (Claude / Gemini) were used during development for boilerplate scaffolding, test harness generation, and documentation drafting. All architectural decisions, system prompts, safety guardrails, code review remediations, and final implementations were directed, reviewed, and verified by the author.
 
@@ -22,8 +21,8 @@
 5. [Quickstart: Running the Demo](#quickstart-running-the-demo)
 6. [Demo Scenarios & Test Fixtures](#demo-scenarios--test-fixtures)
 7. [Production Migration Strategy](#production-migration-strategy)
-8. [Qodo Code Review Evidence](#qodo-code-review-evidence)
-9. [Automated Verification Matrix](#automated-verification-matrix)
+8. [Automated Verification Matrix](#automated-verification-matrix)
+9. [Authors & License](#authors--license)
 
 ---
 
@@ -181,33 +180,12 @@ npm run inject-alert
 
 ## Production Migration Strategy
 
-| Component | Hackathon Demonstration | Production Deployment |
+| Component | Current Implementation | Production Deployment Target |
 |:---|:---|:---|
-| **Disruption Trigger** | **Synthetic Webhook (`inject-alert.ts`)**<br/>Simulated event injection using versioned JSON fixtures (`fixtures/disruption-alert.json`). | **Live Webhook Gateway**<br/>FastAPI / Express webhook endpoint subscribing to NOAA, GDACS, or project44 maritime feeds. |
-| **Corroboration Telemetry** | **Live MCP API Calls**<br/>Real-time queries to Open-Meteo Marine API and Google News RSS feeds. | **Identical Live MCP Calls**<br/>Enterprise weather/news APIs (DTN, Lloyd’s List) plugged into the same MCP interface. |
-| **ERP Ledger** | **SQLite Ledger (`data/erp.db`)**<br/>Lightweight, deterministic ACID database with foreign keys & check constraints. | **SAP S/4HANA or Oracle Cloud ERP**<br/>Swap SQLite queries in `db.ts` with SAP BAPI, OData, or NetSuite REST APIs. |
-| **Human Authorization** | **TrueForge UI Interactive Modal**<br/>Operator reviews Generative UI PO Diff and authorizes via **Allow / Deny** buttons. | **TrueForge Slack / Teams Integration**<br/>Interactive approval card dispatched to enterprise `#supply-chain-ops` channel. |
-
-
-
----
-
-## Qodo Code Review Evidence
-
-Across the development lifecycle, every pull request was audited by **Qodo** across repository coding standards and functional specification adherence.
-
-### Key Remediations Addressed via Qodo Review
-
-| Feature Domain | Severity | Qodo Review Remediation | Pull Request |
-|:---|:---:|:---|:---:|
-| **TrueForge Sandbox Code Execution** | High | Mandated TrueForge native `exec` container sandbox tool for Python MCDA scoring; eliminated stale server-side fallback strings and generalized ranking rules to prevent hardcoded winners. | **[PR #14](https://github.com/ansuman-satapathy/reroute-lg/pull/14)** |
-| **Human-in-the-Loop Approval Gate** | High | Enforced strict `status === 'done'` on both approval and denial paths; ensured audit rejection logging executes reliably when operator clicks DENY. | **[PR #10](https://github.com/ansuman-satapathy/reroute-lg/pull/10)** |
-| **Parallel Dynamic Subagents** | Medium | Enforced strict child thread isolation in `create_sub_agent` execution trace, preventing subagent tool calls from polluting root conversation context. | **[PR #8](https://github.com/ansuman-satapathy/reroute-lg/pull/8)** |
-| **Multi-Criteria Optimization Engine** | High | Fixed edge cases where all alternate suppliers violate guardrails; ensured composite scoring function returns null safely instead of recommending an out-of-band supplier. | **[PR #9](https://github.com/ansuman-satapathy/reroute-lg/pull/9)** |
-| **Operational Guardrails & Skill SOP** | High | Remediated edge cases where Days of Supply (DoS) calculation produces division-by-zero or negative values when warehouse inventory is depleted. | **[PR #7](https://github.com/ansuman-satapathy/reroute-lg/pull/7)** |
-| **Autonomous Alert Ingestion Gateway** | High | Dynamically generated alert prompts so low-severity advisories exercise negative SOP paths without initiating unnecessary re-routing. | **[PR #6](https://github.com/ansuman-satapathy/reroute-lg/pull/6)** |
-| **Live Telemetry MCP Server** | Medium | Added resilient fallback handling for missing coordinate schemas in Open-Meteo queries and validated Google News RSS XML item parsing. | **[PR #4](https://github.com/ansuman-satapathy/reroute-lg/pull/4)** |
-| **24h PO Idempotency & Stockout Bounds** | High | Enforced strict boundary condition (`lead_time_days >= daysOfSupply`) and added canonical SKU index to prevent duplicate PO amendments within 24 hours. | **[PR #12](https://github.com/ansuman-satapathy/reroute-lg/pull/12)** |
+| **Disruption Trigger** | **Automated Webhook Runner (`inject-alert.ts`)**<br/>Event injection using versioned JSON fixtures (`fixtures/disruption-alert.json`). | **Live Webhook Gateway**<br/>FastAPI / Express webhook endpoint subscribing to NOAA, GDACS, or project44 maritime feeds. |
+| **Corroboration Telemetry** | **Live MCP API Connectors**<br/>Real-time queries to Open-Meteo Marine API and Google News RSS feeds. | **Enterprise Corroboration Hub**<br/>Commercial weather/news feeds (DTN, Lloyd’s List) plugged into the same MCP interface. |
+| **ERP Ledger** | **Local SQLite Ledger (`data/erp.db`)**<br/>Deterministic ACID database with foreign keys & check constraints. | **SAP S/4HANA or Oracle Cloud ERP**<br/>Swap SQLite queries in `db.ts` with SAP BAPI, OData, or NetSuite REST APIs. |
+| **Human Authorization** | **TrueForge UI Interactive Modal**<br/>Operator reviews Generative UI PO Diff and authorizes via **Allow / Deny** buttons. | **Slack / Microsoft Teams Webhook**<br/>Interactive approval cards dispatched to enterprise `#supply-chain-ops` channels. |
 
 ---
 
@@ -241,7 +219,9 @@ npm run demo:time
 
 ---
 
-## Submission Details & Track
+## Authors & License
+
 - **Project**: ReRoute-LG
-- **Track**: Agentic AI / Best Use of TrueForge & Model Context Protocol (MCP)
 - **Author**: Ansuman Satapathy
+- **License**: MIT
+

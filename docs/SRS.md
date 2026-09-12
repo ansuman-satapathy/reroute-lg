@@ -68,7 +68,7 @@ ReRoute-LG monitors supply-chain corridors for disruption events (e.g. typhoons,
 ## 3. Non-Functional Requirements (NFRs)
 
 - **`NFR-1` — Security & Secret Management**: No API keys, credentials, or private tokens may be checked into version control. Local configurations must load through `.env` with strict gitignore enforcement.
-- **`NFR-2` — Execution Latency**: End-to-end autonomous triage from alert ingestion to the human approval gate must complete in under 90 seconds (measured latency typically 30–60 seconds across test runs, e.g. 32.23s–46.27s), comfortably fitting within a 3-minute video demonstration.
+- **`NFR-2` — Execution Latency**: End-to-end autonomous triage from alert ingestion to the human approval gate must complete in under 90 seconds (measured latency typically 30–60 seconds across test runs, e.g. 32.23s–46.27s), meeting real-time operational response requirements.
 - **`NFR-3` — Deterministic Tool Calling**: Model steering parameters and schema definitions must prevent tool hallucination, ensuring tool names and arguments adhere strictly to MCP schemas (no observed schema hallucinations across automated test runs).
 - **`NFR-4` — Purchase Order Idempotency**: Repeated invocations of `propose_po_amendment` for the same canonical SKU and supplier within a 24-hour window must return `duplicate: true` and preserve the existing order without creating redundant database entries.
 - **`NFR-5` — Auditability & Reconstructability**: Every triage run must generate a typed event log in TrueForge (`turn.created`, `tool_calls`, `tool.approval_required`, `user.tool_approval`, `tool.response`), allowing complete audit replay for review.
